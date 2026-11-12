@@ -54,7 +54,7 @@ if (REVIEWS.length) {
 }
 
 /* ---------- cart ---------- */
-const KEY = 'thornquill-cart-v1';
+const KEY = 'inky-cart-v1';
 let cart = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '[]').filter((l) => byId(l.id) && l.qty > 0).map((l) => ({ id: l.id, qty: Math.min(l.qty, byId(l.id).stock) })).filter((l) => l.qty > 0); } catch (e) { return []; } })();
 const saveCart = () => { try { localStorage.setItem(KEY, JSON.stringify(cart)); } catch (e) { /* storage blocked: cart lasts this visit */ } };
 const count = () => cart.reduce((n, l) => n + l.qty, 0);
@@ -66,7 +66,7 @@ function addToCart(id) {
   saveCart(); renderCart(); live(`${p.title} added to your cart.`);
 }
 function orderText() {
-  return `Hello Thornquill Bindery,\n\nI would like to order:\n` + cart.map((l) => `- ${byId(l.id).title} x ${l.qty} (${fmt.format(byId(l.id).price * l.qty)})`).join('\n') + `\n\nTotal: ${fmt.format(subtotal())}\n\nName:\nDelivery address:\n`;
+  return `Hello Inky & Co.,\n\nI would like to order:\n` + cart.map((l) => `- ${byId(l.id).title} x ${l.qty} (${fmt.format(byId(l.id).price * l.qty)})`).join('\n') + `\n\nTotal: ${fmt.format(subtotal())}\n\nName:\nDelivery address:\n`;
 }
 function renderCart() {
   const n = count(), badge = $('#cartCount');
@@ -230,7 +230,8 @@ async function boot() {
     canvas.addEventListener('pointermove', (e) => { const i = world.pick(e.clientX, e.clientY); world.setHover(i); canvas.style.cursor = i >= 0 ? 'pointer' : ''; document.body.classList.toggle('over', i >= 0); });
     canvas.addEventListener('click', (e) => { const i = world.pick(e.clientX, e.clientY); if (i >= 0) openProduct(i); });
     addEventListener('pointermove', (e) => world.setPointer((e.clientX / innerWidth - 0.5) * 2, -(e.clientY / innerHeight - 0.5) * 2), { passive: true });
-    let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { world.resize(); measure(); onScroll(); }, 120); });
+    // the canvas is the full viewport, so this also covers window resizes and a pane that was hidden at load
+    let rt; new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(() => { world.resize(); measure(); onScroll(); }, 120); }).observe(canvas);
     canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); document.body.classList.add('nogl'); });
     if (qs.has('debug')) window.__tq = { world, anchors: () => anchors, jump: (i) => { scrollTo({ top: anchors[i].y, behavior: 'instant' }); world.setScroll(anchors[i].y, true); } };
   } catch (err) {

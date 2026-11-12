@@ -1,12 +1,12 @@
 /* Owner settings. Everything you are likely to edit lives in this file. */
 
 export const CONFIG = {
-  brand: 'Thornquill Bindery',
+  brand: 'Inky & Co.',
   currency: 'INR',            // one place to change the currency
   locale: 'en-IN',
   // OWNER: replace these placeholder addresses with your own.
-  contactEmail: 'hello@thornquill.example',
-  orderEmail: 'orders@thornquill.example',
+  contactEmail: 'hello@inky.example',
+  orderEmail: 'orders@inky.example',
   // Forms: leave '' to open the visitor's email app (mailto). Put a Formspree-style URL here to POST JSON instead.
   formEndpoint: '',
   newsletterEndpoint: '',

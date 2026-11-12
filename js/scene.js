@@ -455,13 +455,15 @@ export function createWorld(canvas, opts = {}) {
     if (bg.userData.rx !== rx || bg.userData.ry !== ry) { uv.setXY(0, 0, ry); uv.setXY(1, rx, ry); uv.setXY(2, 0, 0); uv.setXY(3, rx, 0); uv.needsUpdate = true; bg.userData.rx = rx; bg.userData.ry = ry; }
   }
   function draw() {
+    if (!rt) return;
     renderer.setRenderTarget(rt); renderer.setClearColor(PAL.paper, 1); renderer.clear(); renderer.render(scene, camera);
     renderer.setRenderTarget(null); renderer.render(postScene, postCam);
   }
 
   /* ---- sizing and loop ---- */
   function resize() {
-    const w = canvas.clientWidth || window.innerWidth, h = canvas.clientHeight || window.innerHeight, pr = Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : 1.75);
+    const w = canvas.clientWidth, h = canvas.clientHeight, pr = Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : 1.75);
+    if (w < 2 || h < 2) { rt = null; return; } // hidden or not laid out yet: wait for the next resize
     renderer.setPixelRatio(pr); renderer.setSize(w, h, false);
     const bw = Math.floor(w * pr), bh = Math.floor(h * pr);
     if (rt) { rt.dispose(); rt.depthTexture.dispose(); }
