@@ -1,6 +1,6 @@
 /* Page behaviour: shop, cart, dialogs, forms, chapter rail, and the scroll-to-camera link. */
 import { CONFIG, PRODUCTS, REVIEWS, BOOK_DETAILS } from './config.js';
-import { ARCANA, drawCover, drawFrame, drawCardBack, drawCardFace, drawJester, drawMoth, wash, ink, PAL, cv } from './paint.js';
+import { ARCANA, drawCover, drawCardBack, drawCardFace, drawJester, drawMoth, wash, ink, PAL, cv } from './paint.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -12,8 +12,10 @@ const live = (msg) => { const l = $('#live'); l.textContent = ''; setTimeout(() 
 let world = null;
 
 /* ---------- artwork used by the HTML ---------- */
-const frameUrl = drawFrame(420, 720).toDataURL();
-const cover = Object.fromEntries(PRODUCTS.map((p) => [p.id, drawCover(p, 320, 480).toDataURL('image/jpeg', 0.88)]));
+// the canvas art writes titles with these faces, so wait for them (a missing font just falls back)
+try { await Promise.all(['16px "Eagle Lake"', '16px Cardo', 'italic 16px Cardo'].map((f) => document.fonts.load(f))); } catch (e) { /* fall back to system serif */ }
+const frameUrl = 'assets/art/frame.webp'; // the illustrated frame, same as in the 3D scenes
+const cover = Object.fromEntries(PRODUCTS.map((p) => [p.id, drawCover(p, 320, 480, { plain: true }).toDataURL('image/jpeg', 0.88)]));
 {
   const corner = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><g fill='none' stroke='#3A2F2C' stroke-width='1' stroke-linecap='round'><path d='M3 3h20M3 3v20' opacity='.6'/><path d='M8 8c0-4 7-5 8-1s-4 6-7 4' /><path d='M8 8c4 0 5 7 1 8s-6-4-4-7'/><path d='M20 12c4 0 9 3 8 8' stroke='#B8B2AC' stroke-width='3'/><path d='M12 20c0 4 3 9 8 8' stroke='#B8B2AC' stroke-width='3'/></g></svg>`;
   document.documentElement.style.setProperty('--c1', `url("data:image/svg+xml,${encodeURIComponent(corner)}")`);
@@ -188,7 +190,7 @@ if (matchMedia('(pointer: fine)').matches) {
 }
 
 /* ---------- the 3D world and the camera path ---------- */
-const DEF = { fitW: 3.9, fitH: 8.0, dist: 1, lift: 1 };
+const DEF = { fitW: 5.0, fitH: 9.4, dist: 1, lift: 1 };
 const ANCH = [
   ['#hero', { card: 0, side: 'left', lift: 0 }],
   ['#collection', { card: 1, side: 'right', yaw: -0.07 }],

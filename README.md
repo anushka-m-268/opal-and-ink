@@ -1,6 +1,6 @@
 # Opal & Ink: the tarot deck
 
-A scroll-driven 3D storefront for hand-painted novels. Each section is a major-arcana card (0 The Jester, II The High Priestess, I The Magician, III The Empress, XVII The Star, XXI The World) and one camera travels through the whole deck. Plain HTML, CSS and JavaScript with no build step. Three.js r160 (MIT) is bundled in `vendor/three/`. No frameworks, trackers, remote fonts or image files: every illustration is drawn in the browser by `js/paint.js`.
+A scroll-driven 3D storefront for hand-painted novels. Each section is a major-arcana card (0 The Jester, II The High Priestess, I The Magician, III The Empress, XVII The Star, XXI The World) and one camera travels through the whole deck. Plain HTML, CSS and JavaScript with no build step. Three.js r160 (MIT) is bundled in `vendor/three/`. No frameworks, trackers or remote fonts (Eagle Lake and Cardo are bundled, both SIL OFL). The scene art is a set of AI-generated illustrations in `assets/art/` (see Art below); book covers, plates and edges are drawn in the browser by `js/paint.js`.
 
 ## Run it
 
@@ -32,9 +32,21 @@ Page copy, the FAQ and the maker story are in `index.html` (look for `OWNER` com
 
 ## How it is built
 
-- `js/paint.js`: ink line, watercolour wash, halftone and patchwork drawn on canvases. Model-sheet poses for the Jester are in `JESTER_POSES`.
-- `js/scene.js`: six tableaux as real geometry plus layered painted planes. All materials share one shader: three-band wash with pigment pooling, screen-space halftone in shadow, marble cracks and moss, cloth waves, and a noisy fade-to-paper mask that blooms outward as the camera arrives. A post pass adds ink outlines (thinner and lighter with distance), watercolour bleed, paper grain and a paper vignette.
+- `js/paint.js`: ink line, watercolour wash and halftone drawn on canvases. It paints the book covers, plates, page edges, the book that repaints itself and the card back. It also holds the earlier code-drawn Jester and flora, which `sheet.html` still shows.
+- `js/scene.js`: six tableaux, each a few illustrated layers on planes at different depths plus live 3D books and sparkles. Every material shares one shader, including a noisy fade-to-paper mask that blooms outward as the camera arrives, and books get a three-band wash with halftone in shadow. A post pass adds ink outlines (thinner and lighter with distance), watercolour bleed, paper grain and a paper vignette.
 - `js/main.js`: shop, cart (localStorage), dialogs (native `<dialog>`, so focus is trapped and Esc closes), forms, chapter rail, custom cursor, and the link from scroll position to camera shots.
+
+## Art
+
+The illustrations were generated with Google Gemini (`gemini-3-pro-image`) from the prompts in `tools/art-prompts.md`, in an original composition (they are not copies of any existing artwork). Images made this way carry an invisible SynthID watermark, and you should check the terms for commercial use before relying on them. Each tableau is built from layers on planes at different depths, so the camera drifts past them with parallax: `hero-bg` and `hero-fg`, `collection`, `craft`, `empress`, `star`, plus the `frame` around every card and two moth sprites. The 3D books, the book that repaints itself on the workbench and lectern, and the tool highlights are live objects placed on top at positions read off the artwork.
+
+To change a picture: generate a new one on plain paper, then cut it out and drop the result into `assets/art/`:
+
+```bash
+python tools/key_art.py generated.jpg assets/art/collection.webp --width 1024
+```
+
+`key_art.py` makes the paper transparent (only paper connected to the border, so white marble stays solid), balances the paper colour to the site's, and also takes `--crop`, `--erase` and `--seed` to cut a piece out of a busier sheet. If you change an illustration, re-read the positions of the plinths, bench and lectern in `js/scene.js` (`slots`, `toolPos`, the lectern book) so the live objects still line up.
 
 ## Accessibility and performance
 

@@ -1,9 +1,12 @@
 /* Opal & Ink. Palette is the painted one: paper, warm grey, charcoal-brown ink, rust. */
+@font-face { font-family: 'Eagle Lake'; src: url('../assets/fonts/eagle-lake.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Cardo'; src: url('../assets/fonts/cardo.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Cardo'; src: url('../assets/fonts/cardo-italic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
 :root {
   --paper: #ECEBE8; --warm: #CFCAC4; --stone: #B8B2AC; --ink: #3A2F2C; --ink2: #5A4C47;
   --rust: #B4482A; --verm: #C9542F; --poppy: #A33A26; --blush: #D9A9A0; --sage: #6E9C92; --slate: #4E5F5A;
-  --serif: 'Didot', 'Bodoni 72', 'Bodoni MT', 'Playfair Display', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
-  --body: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --serif: 'Eagle Lake', 'Iowan Old Style', Palatino, Georgia, serif;
+  --body: 'Cardo', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   --label: 'Gill Sans', 'Gill Sans MT', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
   --gut: clamp(18px, 6vw, 96px);
 }
@@ -18,7 +21,7 @@ a:hover { color: var(--poppy); }
 .skip { position: fixed; left: 12px; top: -60px; z-index: 100; background: var(--ink); color: var(--paper); padding: 10px 14px; transition: top .2s; }
 .skip:focus { top: 12px; }
 .muted { color: var(--ink2); }
-h1, h2, h3 { font-family: var(--serif); font-weight: 500; line-height: 1.1; margin: 0 0 .5em; text-wrap: balance; letter-spacing: .01em; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 400; line-height: 1.1; margin: 0 0 .5em; text-wrap: balance; letter-spacing: .01em; }
 h1 { font-size: clamp(2.6rem, 6.2vw, 5rem); }
 h2 { font-size: clamp(2rem, 4.2vw, 3.3rem); }
 h3 { font-size: 1.35rem; }
@@ -103,9 +106,9 @@ body.nogl { background: var(--paper) radial-gradient(circle at 30% 20%, rgba(217
 .tface { position: relative; width: 100%; aspect-ratio: 7 / 12; padding: 0; border: 0; cursor: pointer; background: var(--paper); color: inherit; font: inherit; filter: drop-shadow(0 6px 10px rgba(58,47,44,.18)); transition: transform .5s; }
 .tface:hover, .tface:focus-visible { transform: translateY(-6px) rotate(-.8deg); }
 .tface .cardart { position: absolute; inset: 0; }
-.tface .num { position: absolute; top: 5.8%; left: 0; right: 0; text-align: center; color: var(--ink); font-size: .85rem; letter-spacing: .3em; }
-.tface .cover { position: absolute; left: 14%; right: 14%; top: 12.5%; height: 54%; object-fit: cover; object-position: top; }
-.tface .banner { position: absolute; left: 12%; right: 12%; bottom: 5.2%; text-align: center; font: 600 .82rem/1.15 var(--serif); color: var(--ink); padding: 0 4px; }
+.tface .num { position: absolute; top: 12%; left: 0; right: 0; text-align: center; color: var(--ink); font-size: .85rem; letter-spacing: .3em; }
+.tface .cover { position: absolute; left: 19%; right: 19%; top: 21%; height: 44%; object-fit: cover; object-position: center; }
+.tface .banner { position: absolute; left: 24%; right: 24%; bottom: 8.2%; text-align: center; font: 400 .86rem/1.15 var(--serif); color: var(--ink); padding: 0 4px; }
 .tcard .meta { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-family: var(--label); font-size: .85rem; letter-spacing: .04em; }
 .tcard .ed { color: var(--ink2); font-size: .72rem; }
 .tcard .sold { color: var(--poppy); text-transform: uppercase; letter-spacing: .16em; font-size: .72rem; }

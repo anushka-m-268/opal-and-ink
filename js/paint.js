@@ -450,17 +450,18 @@ function wrap(c, text, x, y, maxW, lh) {
   for (const w of words) { const t = line ? line + ' ' + w : w; if (c.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; }
   out.push(line); out.forEach((l, i) => c.fillText(l, x, y + i * lh)); return out.length;
 }
-const SERIF = '"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif';
-export function drawCover(p, w = 512, h = 768) {
+const SERIF = 'Cardo,"Iowan Old Style",Palatino,Georgia,serif';
+export function drawCover(p, w = 512, h = 768, opts = {}) {
   const cvs = cv(w, h), c = cvs.getContext('2d'), rnd = rng(p.seed || 5), [c1, c2] = p.palette;
   c.fillStyle = PAL.paper; c.fillRect(0, 0, w, h);
   for (let i = 0; i < 7; i++) wash(c, smooth(Array.from({ length: 7 }, (_, k) => { const a = k / 7 * TAU, r = 120 + rnd() * 120; return [rnd() * w * 0.6 + w * 0.2 + Math.cos(a) * r, rnd() * h * 0.6 + h * 0.2 + Math.sin(a) * r]; })), i % 2 ? c1 : c2, { a: 0.4, blur: 28, edge: 0 });
   const edge = (cc) => { cc.beginPath(); cc.rect(24, 24, w - 48, h - 48); };
   ink(c, edge, 2, 0.7);
+  if (opts.plain) { emblem(c, p.motif, w / 2, h * 0.5, 128, { cols: [c1, c2, PAL.blush] }); return cvs; } // art only, for the shop cards (they print the title themselves)
   emblem(c, p.motif, w / 2, h * 0.4, 118, { cols: [c1, c2, PAL.blush] });
   c.fillStyle = PAL.paper; c.globalAlpha = 0.9; c.fillRect(44, h * 0.66, w - 88, h * 0.26); c.globalAlpha = 1;
   ink(c, (cc) => { cc.beginPath(); cc.rect(44, h * 0.66, w - 88, h * 0.26); }, 1.4, 0.7);
-  c.fillStyle = PAL.ink; c.textAlign = 'center'; c.font = `600 40px ${SERIF}`;
+  c.fillStyle = PAL.ink; c.textAlign = 'center'; c.font = `400 34px "Eagle Lake",${SERIF}`;
   const n = wrap(c, p.title, w / 2, h * 0.66 + 58, w - 130, 44);
   c.font = `500 20px ${SERIF}`; c.fillStyle = PAL.slate; c.fillText(p.author.toUpperCase().split('').join(' '), w / 2, h * 0.66 + 58 + n * 44 + 14);
   scrollMotif(c, 50, 60, 0.4, 1); scrollMotif(c, w - 50, 60, 0.4, -1);
@@ -495,7 +496,7 @@ export function bookLayers(w = 512, h = 768) {
   const cols = { cols: [PAL.rust, PAL.sage, PAL.blush] }; const ptc = paint.getContext('2d');
   wash(ptc, ell(w / 2, h * 0.42, 190, 190), PAL.sage, { a: 0.45, blur: 30, edge: 0 }); emblem(ptc, 'rose', w / 2, h * 0.42, 130, { ...cols, ink: false });
   const gc = gild.getContext('2d'); gc.strokeStyle = PAL.gold; gc.lineWidth = 5; gc.strokeRect(36, 36, w - 72, h - 72); gc.lineWidth = 2; gc.strokeRect(52, 52, w - 104, h - 104);
-  gc.fillStyle = PAL.gold; gc.font = `600 44px ${SERIF}`; gc.textAlign = 'center'; gc.fillText('OPAL & INK', w / 2, h * 0.82);
+  gc.fillStyle = PAL.gold; gc.font = `400 44px "Eagle Lake",${SERIF}`; gc.textAlign = 'center'; gc.fillText('OPAL & INK', w / 2, h * 0.82);
   for (let i = 0; i < 4; i++) emblemStar(gc, 96 + (i % 2) * (w - 192), 96 + Math.floor(i / 2) * (h - 192), 16, PAL.gold, { ink: false });
   return (_layers = { prime, sketch, paint, gild, w, h });
 }
@@ -517,8 +518,8 @@ export function drawCardFace({ numeral, name, motif }, w = 420, h = 720) {
   wash(c, ell(w / 2, h * 0.47, 150, 200), PAL.blush, { a: 0.3, blur: 30, edge: 0 });
   emblem(c, motif, w / 2, h * 0.47, 100, { cols: [PAL.rust, PAL.sage, PAL.blush] });
   c.save(); c.globalAlpha = 0.9; c.drawImage(drawFrame(700, 1200), 0, 0, w, h); c.restore();
-  c.fillStyle = PAL.ink; c.textAlign = 'center'; c.font = `600 30px ${SERIF}`; c.fillText(numeral.split('').join(' '), w / 2, 126);
-  c.font = `600 26px ${SERIF}`; c.fillText(name.toUpperCase(), w / 2, h - 64, w - 150);
+  c.fillStyle = PAL.ink; c.textAlign = 'center'; c.font = `400 30px "Eagle Lake",${SERIF}`; c.fillText(numeral.split('').join(' '), w / 2, 126);
+  c.font = `400 26px "Eagle Lake",${SERIF}`; c.fillText(name.toUpperCase(), w / 2, h - 64, w - 150);
   return cvs;
 }
 export const ARCANA = [

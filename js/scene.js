@@ -1,15 +1,14 @@
 /* The 3D world: six card tableaux standing in a row, one camera that travels between them,
    and a post pass that turns the render into ink line, watercolour bleed, halftone and paper. */
 import * as THREE from '../vendor/three/three.module.js';
-import { PAL, cv, rng, drawJester, drawMoth, drawFlora, drawStar, drawFrame, drawWallpaper, drawCardFace, drawCardBack,
-  drawCover, drawEdge, drawPlate, drawPatchwork, composeBook, ARCANA } from './paint.js';
+import { PAL, cv, rng, drawStar, drawWallpaper, drawCardBack, drawCover, drawEdge, drawPlate, composeBook, ARCANA } from './paint.js';
 import { PRODUCTS } from './config.js';
 
 THREE.ColorManagement.enabled = false; // every colour in this file is used exactly as written
 
 export const SP = 11;                  // distance between neighbouring cards along x
 const FOV = 30, R = Math.PI / 180;
-const CARD = { hw: 1.6, hh: 2.95 };    // half size of the area each tableau paints inside its frame
+const CARD = { hw: 1.8, hh: 3.2 };    // half size of the area each tableau paints inside its frame
 const GROUND = -2.35;
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -146,41 +145,6 @@ export function mat(tab, o = {}) {
 }
 const mesh = (g, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); return o; };
 
-/* ---------------- geometry kits ---------------- */
-function archGeo(w, h, iw, ih, d) {
-  const s = new THREE.Shape(); s.moveTo(-w / 2, 0); s.lineTo(w / 2, 0); s.lineTo(w / 2, h - w / 2); s.absarc(0, h - w / 2, w / 2, 0, Math.PI, false); s.closePath();
-  const hole = new THREE.Path(), r = iw / 2;
-  hole.moveTo(-r, 0); hole.lineTo(-r, ih - r); hole.absarc(0, ih - r, r, Math.PI, 0, true); hole.lineTo(r, 0); hole.closePath();
-  s.holes.push(hole);
-  const g = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: false, curveSegments: 24 }); g.translate(0, 0, -d / 2); return g;
-}
-const MARBLE = '#E7E4DF';
-function column(tab, x, z, h) {
-  const g = new THREE.Group(), m = mat(tab, { color: MARBLE, lit: 1, marble: 1 });
-  g.add(mesh(new THREE.CylinderGeometry(0.24, 0.27, h, 24), m, 0, h / 2, 0));
-  g.add(mesh(new THREE.BoxGeometry(0.74, 0.18, 0.74), m, 0, 0.09, 0));
-  g.add(mesh(new THREE.BoxGeometry(0.74, 0.16, 0.74), m, 0, h - 0.08, 0));
-  const r = mesh(new THREE.TorusGeometry(0.27, 0.05, 8, 24), m, 0, h - 0.22, 0); r.rotation.x = Math.PI / 2; g.add(r);
-  g.position.set(x, GROUND, z); return g;
-}
-function urn(tab, x, z, s = 1) {
-  const pts = [[0, 0], [0.22, 0], [0.27, 0.05], [0.2, 0.2], [0.3, 0.45], [0.27, 0.6], [0.34, 0.68], [0.26, 0.7]].map((p) => new THREE.Vector2(p[0], p[1]));
-  const o = mesh(new THREE.LatheGeometry(pts, 20), mat(tab, { color: '#DEDAD3', lit: 1, marble: 1, side: THREE.DoubleSide }), x, GROUND, z); o.scale.setScalar(s); return o;
-}
-function floor(tab, w = 4.2, d = 5, z = 0.3) {
-  const c = cv(256, 256), x = c.getContext('2d');
-  x.fillStyle = '#E4E1DB'; x.fillRect(0, 0, 256, 256); x.fillStyle = '#D6D2CB'; x.fillRect(0, 0, 128, 128); x.fillRect(128, 128, 128, 128);
-  x.strokeStyle = PAL.ink; x.globalAlpha = 0.22; x.lineWidth = 2; x.strokeRect(1, 1, 254, 254); x.strokeRect(1, 1, 128, 128); x.strokeRect(128, 128, 128, 128);
-  const t = T(c, 'floor', true); t.repeat.set(w / 1.4, d / 1.4);
-  const g = new THREE.PlaneGeometry(w, d); g.rotateX(-Math.PI / 2);
-  return mesh(g, mat(tab, { map: t, lit: 1 }), 0, GROUND, z);
-}
-/* hanging fabric; color 'patch' uses the painted patchwork texture */
-function cloth(tab, w, h, color, wave = 0.12, alpha = 1, speed = 0.8) {
-  const map = color === 'patch' ? T(drawPatchwork(128, 512), 'patch') : null;
-  return mesh(new THREE.PlaneGeometry(w, h, 8, 24), mat(tab, { color: map ? '#ffffff' : color, map, lit: 2, cloth: true, wave, waveSpeed: speed, side: THREE.DoubleSide, transparent: alpha < 1, alpha }));
-}
-
 /* a book that can open: spine at -x, fore-edge at +x, front cover toward +z */
 function makeBook(tab, p, { W = 1, H = 1.4, D = 0.26, coverTex = null, withPlate = false } = {}) {
   const g = new THREE.Group(), cov = 0.035, [c1] = p.palette;
@@ -230,124 +194,67 @@ export function createWorld(canvas, opts = {}) {
     const g = new THREE.Group(); g.position.x = idx * SP;
     const tab = { idx, g, uCard: { value: new THREE.Vector4(idx * SP, 0, CARD.hw, CARD.hh) }, uReveal: { value: 0 }, upd: [], frame: null };
     if (frame) {
-      const fm = mat(null, { map: T(drawFrame(), 'frame'), transparent: true, alpha: 0 });
-      tab.frame = mesh(new THREE.PlaneGeometry(3.85, 6.6), fm, 0, 0, 0.6); g.add(tab.frame);
+      const fm = mat(null, { map: art('frame'), transparent: true, alpha: 0 });
+      tab.frame = mesh(new THREE.PlaneGeometry(4.55, 8.0), fm, 0, 0, 0.6); g.add(tab.frame);
     }
     scene.add(g); tabs.push(tab); return tab;
   }
-  const flora = (k, seed) => T(drawFlora(k, seed), `flora-${k}-${seed}`);
   const sprite = (tab, tex, w, h, x, y, z, o = {}) => { const m = mesh(new THREE.PlaneGeometry(w, h), mat(tab, { map: tex, transparent: true, ...o }), x, y, z); tab.g.add(m); return m; };
   const sparkles = [];
   function sparkle(tab, x, y, z, s, col = PAL.verm) {
     const m = sprite(tab, T(drawStar(col), 'star-' + col), s, s, x, y, z); sparkles.push({ m, s, ph: Math.random() * 6 }); return m;
   }
-  const jesterTex = (k) => T(drawJester(k, 1024), 'jester-' + k);
+  // illustrated layers (assets/art/*.webp): a plane per layer, scaled so it looks the same size from the nominal camera distance
+  const loader = new THREE.TextureLoader(), D = 13;
+  const art = (n) => { const t = loader.load(`assets/art/${n}.webp`); t.anisotropy = 4; return t; };
+  function layer(tab, name, z, { w = 3.6, h = 6.45, x = 0, y = 0 } = {}) {
+    const s = (D - z) / D, m = mesh(new THREE.PlaneGeometry(w * s, h * s), mat(tab, { map: art(name), transparent: true }), x * s, y * s, z);
+    m.userData.base = m.position.y; tab.g.add(m); return m;
+  }
 
   /* ---- 0 · The Jester ---- */
-  const t0 = tableau(0), g0 = t0.g;
-  g0.add(mesh(archGeo(3.2, 5.1, 2.4, 3.9, 0.35), mat(t0, { color: '#DAD7D2', lit: 1, marble: 1 }), 0, GROUND, -2.4));
-  g0.add(floor(t0)); g0.add(column(t0, -1.2, -0.7, 4.6)); g0.add(column(t0, 1.2, -0.7, 4.6));
-  const ped = mat(t0, { color: MARBLE, lit: 1, marble: 1 });
-  g0.add(mesh(new THREE.CylinderGeometry(0.95, 1.05, 0.55, 28), ped, 0, GROUND + 0.28, 0.2));
-  const ring = mesh(new THREE.TorusGeometry(0.98, 0.06, 8, 32), ped, 0, GROUND + 0.58, 0.2); ring.rotation.x = Math.PI / 2; g0.add(ring);
-  const stack = [[0, 1.7, 2.0, 0.28, -6], [1, 1.5, 1.8, 0.26, 9], [2, 1.6, 1.9, 0.26, -4], [3, 1.35, 1.6, 0.24, 11], [4, 1.2, 1.5, 0.22, -8]];
-  let sy = GROUND + 0.6;
-  stack.forEach(([pi, w, h, d, yaw]) => {
-    const b = makeBook(t0, PRODUCTS[pi], { W: w, H: h, D: d }); b.rotation.x = -Math.PI / 2; b.rotation.z = yaw * R;
-    b.position.set(0, sy + d / 2, 0.2); sy += d; g0.add(b);
-  });
-  const hopen = new THREE.Group(); g0.add(hopen);
-  const jr = sprite(t0, jesterTex('recline'), 3.9, 3.9, -0.3, sy + 0.62, 1.3, { alpha: 1 });
-  const jl = sprite(t0, jesterTex('reclineUp'), 3.9, 3.9, -0.3, sy + 0.62, 1.32, { alpha: 0 });
-  for (const x of [0.95, 1.2]) { const cl = cloth(t0, 0.24, 1.5, 'patch', 0.09); cl.position.set(x, sy - 0.75, 1.1); g0.add(cl); }
-  for (const x of [-1.25, 1.25]) { g0.add(urn(t0, x, 1.0)); sprite(t0, flora('poppies', x < 0 ? 1 : 4), 1.5, 1.9, x, GROUND + 1.25, 1.05); }
-  sprite(t0, flora('grass', 3), 1.8, 1.4, -0.4, GROUND + 0.6, 1.8); sprite(t0, flora('grass', 6), 1.8, 1.4, 0.6, GROUND + 0.6, 1.9);
-  sparkle(t0, 0.5, 1.5, 0.8, 0.4); sparkle(t0, -1.0, 1.1, 0.7, 0.25, '#ffffff'); sparkle(t0, 1.1, 0.4, 0.8, 0.22);
+  const t0 = tableau(0);
+  layer(t0, 'hero-bg', -1.2);
+  const subject = layer(t0, 'hero-fg', 0.5);
+  sparkle(t0, 0.55, 1.65, 0.9, 0.34); sparkle(t0, -0.95, 0.9, 0.9, 0.22, '#ffffff'); sparkle(t0, 1.05, 0.1, 0.9, 0.2);
 
   /* ---- 1 · The High Priestess: the collection ---- */
   const t1 = tableau(1), g1 = t1.g;
-  g1.add(mesh(archGeo(3.3, 5.4, 2.7, 4.6, 0.45), mat(t1, { color: '#DAD7D2', lit: 1, marble: 1 }), 0, GROUND, -1.6));
-  g1.add(floor(t1)); g1.add(column(t1, -1.42, -0.8, 4.4)); g1.add(column(t1, 1.42, -0.8, 4.4));
-  const veil = cloth(t1, 2.7, 3.9, '#A9C2BB', 0.1, 0.6, 0.6); veil.position.set(0, 0.4, -1.1); g1.add(veil);
-  g1.add(mesh(new THREE.BoxGeometry(3.3, 0.18, 2.1), mat(t1, { color: MARBLE, lit: 1, marble: 1 }), 0, GROUND + 0.09, 0.15));
-  const books1 = [], plinthMat = mat(t1, { color: MARBLE, lit: 1, marble: 1 });
-  const slots = [[-0.95, 0.9, 0], [-0.32, 0.9, 0], [0.32, 0.9, 0], [0.95, 0.9, 0], [-0.62, -0.2, 1], [0, -0.2, 1], [0.62, -0.2, 1]]; // [x, z, row]
+  layer(t1, 'collection', -0.5);
+  const books1 = [];
+  // [x, y, z] of each book, measured from the six plinth tops (and the dais step) in the artwork
+  const slots = [[0, -0.73, 0.1], [-0.373, -0.957, 0.15], [0.398, -1.007, 0.15], [-0.548, -1.207, 0.25], [0.553, -1.357, 0.25], [0, -1.533, 0.3], [-0.848, -1.73, 0.35]];
   PRODUCTS.forEach((p, k) => {
-    const [x, z, row] = slots[k], ph = row ? 1.05 : 0.5;
-    g1.add(mesh(new THREE.CylinderGeometry(0.27, 0.31, ph, 20), plinthMat, x, GROUND + 0.18 + ph / 2, z));
-    const b = makeBook(t1, p, { W: 0.6, H: 0.86, D: 0.15 });
-    b.position.set(x, GROUND + 0.18 + ph + 0.43, z); b.rotation.y = -x * 0.18; b.rotation.x = -0.05; b.userData.index = k; g1.add(b); books1.push(b);
+    const [x, y, z] = slots[k], b = makeBook(t1, p, { W: 0.42, H: 0.6, D: 0.1 });
+    b.position.set(x, y, z); b.userData.index = k; g1.add(b); books1.push(b);
   });
-  const hoverFrame = sprite(t1, T(drawFrame(), 'frame'), 1.0, 1.72, 0, 0, 1.2, { alpha: 0 });
-  sprite(t1, flora('grass', 8), 1.8, 1.3, -1.1, GROUND + 0.5, 1.6); sprite(t1, flora('grass', 9), 1.8, 1.3, 1.1, GROUND + 0.5, 1.7);
-  sparkle(t1, 0, 2.1, 0, 0.35, '#ffffff'); sparkle(t1, 1.0, 1.4, 0.2, 0.2);
+  const hoverFrame = sprite(t1, art('frame'), 0.8, 1.4, 0, 0, 0.8, { alpha: 0 });
 
   /* ---- 2 · The Magician: the craft ---- */
   const t2 = tableau(2), g2 = t2.g;
-  g2.add(mesh(archGeo(3.0, 5.0, 2.3, 3.9, 0.35), mat(t2, { color: '#DAD7D2', lit: 1, marble: 1 }), 0, GROUND, -2.2));
-  g2.add(floor(t2));
-  const wood = mat(t2, { color: '#B9A58F', lit: 1 });
-  g2.add(mesh(new THREE.BoxGeometry(2.9, 0.16, 1.2), wood, 0, -1.4, 0.3));
-  for (const x of [-1.2, 1.2]) g2.add(mesh(new THREE.BoxGeometry(0.14, 1.0, 1.0), wood, x, -1.92, 0.3));
+  layer(t2, 'craft', -0.5);
   const craftCanvas = cv(512, 768); composeBook(craftCanvas, 0);
   const craftTex = new THREE.CanvasTexture(craftCanvas); craftTex.anisotropy = 4;
-  const bookP = { ...PRODUCTS[0], palette: ['#B4482A', '#6E9C92'] };
-  const cb = makeBook(t2, bookP, { W: 1.15, H: 1.65, D: 0.24, coverTex: craftTex }); cb.position.set(0, -0.48, 0.35); cb.rotation.x = -0.1; g2.add(cb);
-  const ceramic = mat(t2, { color: '#E3DFD8', lit: 1, marble: 1 });
-  const tools = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
-  // 0 varnish jar (priming)
-  tools[0].add(mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.4, 20), mat(t2, { color: '#C08A3E', lit: 1 }), 0, 0.2, 0));
-  tools[0].add(mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.1, 16), mat(t2, { color: '#8B6B55', lit: 1 }), 0, 0.45, 0)); tools[0].position.set(0.75, -1.32, 0.9);
-  // 1 brushes in a jar (sketching)
-  tools[1].add(mesh(new THREE.CylinderGeometry(0.17, 0.15, 0.34, 18), ceramic, 0, 0.17, 0));
-  [-0.07, 0, 0.07].forEach((dx, i) => { const br = new THREE.Group(); br.add(mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.8, 8), mat(t2, { color: '#8B6B55', lit: 1 }), 0, 0.4, 0)); br.add(mesh(new THREE.ConeGeometry(0.028, 0.14, 8), mat(t2, { color: i === 1 ? PAL.ink : PAL.verm, lit: 1 }), 0, 0.84, 0)); br.position.set(dx, 0.2, 0); br.rotation.z = (i - 1) * 0.22; tools[1].add(br); });
-  tools[1].position.set(-1.05, -1.32, 0.55);
-  // 2 palette (painting)
-  const pal = mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.03, 28), mat(t2, { color: '#D8C7AE', lit: 1 }), 0, 0.02, 0); pal.scale.z = 0.7; tools[2].add(pal);
-  [PAL.rust, PAL.sage, PAL.blush, PAL.verm, PAL.slate].forEach((c, i) => tools[2].add(mesh(new THREE.SphereGeometry(0.05, 10, 8), mat(t2, { color: c, lit: 1 }), -0.22 + i * 0.11, 0.06, -0.08 + (i % 2) * 0.12)));
-  tools[2].position.set(-0.5, -1.32, 0.95);
-  // 3 gold leaf (gilding)
-  for (let i = 0; i < 4; i++) tools[3].add(mesh(new THREE.BoxGeometry(0.46, 0.015, 0.46), mat(t2, { color: '#C9A55A', lit: 1 }), (i % 2) * 0.03, 0.01 + i * 0.016, (i % 3) * 0.02));
-  tools[3].position.set(1.05, -1.3, 0.35);
-  tools.forEach((t) => { t.scale.setScalar(1.4); g2.add(t); });
-  g2.add(urn(t2, -1.35, -0.4)); sprite(t2, flora('poppies', 12), 1.4, 1.8, -1.35, GROUND + 1.2, -0.35);
-  const toolSpark = sparkle(t2, 0, 0, 1.2, 0.3);
+  const cb = makeBook(t2, { ...PRODUCTS[0], palette: ['#B4482A', '#6E9C92'] }, { W: 0.9, H: 1.3, D: 0.2, coverTex: craftTex });
+  cb.position.set(0.065, -0.15, 0.25); cb.rotation.x = -0.04; g2.add(cb);
+  // where each step's tool sits in the artwork: varnish, brushes, palette, gold leaf
+  const toolPos = [[1.08, -0.4], [-0.574, -0.1], [0.78, -0.86], [0.72, -0.57]];
+  const toolSpark = sparkle(t2, 0, 0, 0.8, 0.3);
 
   /* ---- 3 · The Empress: commissions ---- */
   const t3 = tableau(3), g3 = t3.g;
-  g3.add(mesh(archGeo(2.7, 4.8, 1.9, 4.0, 0.25), mat(t3, { color: '#DAD7D2', lit: 1, marble: 1 }), 0, GROUND, -1.9));
-  [[-0.95, 1.4], [0.9, 1.7], [-0.7, 2.4], [0.75, 2.7], [0, 3.2]].forEach(([x, y], i) => sprite(t3, flora('roses', 20 + i), 1.1, 1.4, x, y - 2.4, -1.7));
-  const lec = mat(t3, { color: MARBLE, lit: 1, marble: 1 });
-  g3.add(mesh(new THREE.CylinderGeometry(0.14, 0.2, 1.1, 14), lec, 0, GROUND + 0.55, 0.3));
-  g3.add(mesh(new THREE.BoxGeometry(0.7, 0.12, 0.7), lec, 0, GROUND + 0.06, 0.3));
-  const slab = mesh(new THREE.BoxGeometry(1.5, 0.1, 1.1), lec, 0, GROUND + 1.12, 0.3); slab.rotation.x = 0.9; g3.add(slab);
+  layer(t3, 'empress', -0.5);
   const paintCanvas = cv(512, 768); composeBook(paintCanvas, 1);
   const paintTex = new THREE.CanvasTexture(paintCanvas); paintTex.anisotropy = 4;
-  const pb = makeBook(t3, { ...PRODUCTS[6], palette: ['#A33A26', '#6E9C92'] }, { W: 1.15, H: 1.6, D: 0.2, coverTex: paintTex });
-  pb.rotation.x = -Math.PI / 2 + 0.9; pb.position.set(0, GROUND + 1.55, 0.58); g3.add(pb);
-  [[-1.05, 1.0, 'poppies', 31], [-0.2, 1.0, 'poppies', 32], [0.6, 1.1, 'poppies', 33], [1.15, 0.9, 'roses', 34]].forEach(([x, z, k, s]) => sprite(t3, flora(k, s), 1.5, 1.9, x, GROUND + 1.0, -z + 0.4));
-  [[-0.9, 0.9, 'roses', 35], [1.0, 1.1, 'poppies', 36]].forEach(([x, z, k, s]) => sprite(t3, flora(k, s), 1.4, 1.75, x, GROUND + 0.85, z + 0.3));
-  [-1.0, -0.2, 0.7].forEach((x, i) => sprite(t3, flora('grass', 40 + i), 1.8, 1.3, x, GROUND + 0.5, 1.7));
-  sparkle(t3, 0.7, 0.7, 1.0, 0.3);
+  const pb = makeBook(t3, { ...PRODUCTS[6], palette: ['#A33A26', '#6E9C92'] }, { W: 1.0, H: 1.4, D: 0.16, coverTex: paintTex });
+  pb.position.set(-0.05, 0.62, 0.3); pb.rotation.x = -0.28; g3.add(pb);
+  sparkle(t3, 0.7, 0.9, 0.8, 0.3);
 
   /* ---- 4 · The Star: about ---- */
-  const t4 = tableau(4), g4 = t4.g;
-  g4.add(mesh(new THREE.BoxGeometry(3.2, 0.5, 0.3), mat(t4, { color: MARBLE, lit: 1, marble: 1 }), 0, GROUND + 0.55, -1.5));
-  const poolC = cv(1024, 560), pc = poolC.getContext('2d');
-  { const gr = pc.createRadialGradient(512, 280, 40, 512, 280, 520); gr.addColorStop(0, '#C9D8D3'); gr.addColorStop(1, '#8FB0A7'); pc.fillStyle = gr; pc.fillRect(0, 0, 1024, 560);
-    pc.save(); pc.globalAlpha = 0.4; pc.translate(300, 420); pc.scale(0.5, -0.5); pc.drawImage(drawJester('sit', 1024), -512, -1024, 1024, 1024); pc.restore();
-    pc.strokeStyle = PAL.paper; pc.globalAlpha = 0.5; pc.lineWidth = 2; for (let i = 0; i < 12; i++) { pc.beginPath(); pc.ellipse(512, 280, 120 + i * 38, 50 + i * 16, 0, 0, 7); pc.stroke(); }
-    for (let i = 0; i < 9; i++) { const sx = 200 + (i * 97) % 640, sy = 120 + (i * 61) % 300; pc.globalAlpha = 0.7; pc.drawImage(drawStar(i % 2 ? PAL.verm : '#ffffff', 64), sx - 16, sy - 16, 32, 32); } }
-  const poolG = new THREE.CircleGeometry(1.5, 48); poolG.scale(1, 0.56, 1); poolG.rotateX(-Math.PI / 2);
-  const pool = mesh(poolG, mat(t4, { map: new THREE.CanvasTexture(poolC), lit: 1 }), 0, GROUND + 0.5, 0.4); g4.add(pool);
-  const rimG = new THREE.TorusGeometry(1.5, 0.1, 8, 48); rimG.scale(1, 0.56, 1); rimG.rotateX(Math.PI / 2);
-  const rim = mesh(rimG, mat(t4, { color: MARBLE, lit: 1, marble: 1 }), 0, GROUND + 0.52, 0.4); g4.add(rim);
-  sprite(t4, jesterTex('sit'), 3.1, 3.1, -0.9, GROUND + 0.55 + 1.05, 0.5);
-  [[-1.2, -1.0, 8], [1.2, -0.9, 9], [0.2, -1.2, 10]].forEach(([x, z, s]) => sprite(t4, flora('grass', s), 1.6, 1.3, x, GROUND + 1.05, z));
-  g4.add(urn(t4, 1.25, 0.3, 1.1)); sprite(t4, flora('poppies', 50), 1.2, 1.5, 1.25, GROUND + 1.5, 0.3);
-  [-1.1, 0.0, 1.0].forEach((x, i) => sprite(t4, flora('grass', 60 + i), 1.8, 1.3, x, GROUND + 0.5, 1.8));
-  const big = sparkle(t4, 0.35, 1.9, -0.6, 1.0);
-  { const r = rng(5); for (let i = 0; i < 14; i++) sparkle(t4, (r() - 0.5) * 2.7, 0.3 + r() * 2.3, -0.9 + r() * 0.6, 0.16 + r() * 0.26, i % 2 ? '#ffffff' : PAL.verm); }
+  const t4 = tableau(4);
+  layer(t4, 'star', -0.3);
+  sparkle(t4, 0.15, 2.2, 0.6, 1.1);
+  { const r = rng(5); for (let i = 0; i < 9; i++) sparkle(t4, (r() - 0.5) * 2.6, 1.0 + r() * 1.7, 0.5, 0.14 + r() * 0.2, i % 2 ? '#ffffff' : PAL.verm); }
 
   /* ---- 5 · The World: a spread of cards in a ring ---- */
   const t5 = tableau(5, false), g5 = t5.g;
@@ -355,27 +262,39 @@ export function createWorld(canvas, opts = {}) {
   const ringR = 4.2;
   g5.add(mesh(new THREE.CircleGeometry(5.8, 48).rotateX(-Math.PI / 2), mat(t5, { color: '#DEDAD3', lit: 1, marble: 1 }), 0, GROUND, 0));
   const back = T(drawCardBack(), 'cardback');
+  const faceArt = { jester: ['hero-bg', 'hero-fg'], collection: ['collection'], craft: ['craft'], commissions: ['empress'], about: ['star'], world: ['star-bg'] };
+  function faceTex(a) {
+    const c = cv(420, 720), x = c.getContext('2d'), t = new THREE.CanvasTexture(c); t.anisotropy = 4;
+    const load = (n) => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = `assets/art/${n}.webp`; });
+    const paint = (imgs, fr) => {
+      x.fillStyle = PAL.paper; x.fillRect(0, 0, 420, 720);
+      for (const im of imgs) if (im) x.drawImage(im, 53, 92, 314, 562);
+      if (fr) x.drawImage(fr, 0, 0, 420, 720);
+      x.fillStyle = PAL.ink; x.textAlign = 'center';
+      x.font = '400 21px "Eagle Lake", Georgia, serif'; x.fillText(a.numeral, 210, 128);
+      x.font = '400 19px "Eagle Lake", Georgia, serif'; x.fillText(a.name.toUpperCase(), 210, 666, 200);
+      t.needsUpdate = true;
+    };
+    paint([], null);
+    Promise.all([...faceArt[a.id].map(load), load('frame')]).then((r) => paint(r.slice(0, -1), r[r.length - 1]));
+    return t;
+  }
   const ringCards = [];
   ARCANA.forEach((a, k) => {
     const th = (90 + (k - 5) * 60) * R, x = Math.cos(th) * ringR, z = Math.sin(th) * ringR, cg = new THREE.Group();
-    const face = mesh(new THREE.PlaneGeometry(2.1, 3.6), mat(t5, { map: T(drawCardFace(a), 'face-' + a.id) }), 0, 0, 0.012);
+    const face = mesh(new THREE.PlaneGeometry(2.1, 3.6), mat(t5, { map: faceTex(a) }), 0, 0, 0.012);
     const bk = mesh(new THREE.PlaneGeometry(2.1, 3.6), mat(t5, { map: back }), 0, 0, -0.012); bk.rotation.y = Math.PI;
     cg.add(face, bk); cg.position.set(x, GROUND + 1.8, z); cg.rotation.y = Math.atan2(Math.cos(th), Math.sin(th)); g5.add(cg); ringCards.push(cg);
   });
-  sprite(t5, jesterTex('bow'), 3.4, 3.4, 0, GROUND + 1.0, 0, {});
+  sprite(t5, art('hero-fg'), 1.9, 3.4, 0, GROUND + 1.7, 0);
   for (let i = 0; i < 10; i++) sparkle(t5, Math.cos(i * 0.9) * 3.2, 0.3 + (i % 4) * 0.8, Math.sin(i * 0.9) * 1.5, 0.22 + (i % 3) * 0.1, i % 2 ? '#ffffff' : PAL.verm);
 
-  /* ---- the two familiars ---- */
-  const mothArt = drawMoth(), wingTex = T(mothArt.wing, 'mothwing'), bodyTex = T(mothArt.body, 'mothbody');
-  const moths = [0, 1].map((i) => {
-    const g = new THREE.Group(), ws = 0.8;
-    const wg = new THREE.PlaneGeometry(ws, ws); wg.translate(ws / 2 - 0.02, 0, 0);
-    const wm = mat(null, { map: wingTex, transparent: true, side: THREE.DoubleSide });
-    const wr = new THREE.Mesh(wg, wm), wl = new THREE.Mesh(wg, wm); wl.scale.x = -1;
-    const body = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.62), mat(null, { map: bodyTex, transparent: true, side: THREE.DoubleSide })); body.position.z = 0.03;
-    const rib = cloth(null, 0.08, 0.7, i ? PAL.verm : PAL.rust, 0.06, 1, 1.4); rib.position.set(0, -0.5, -0.02);
-    g.add(wr, wl, body, rib); g.scale.setScalar(0.45); scene.add(g);
-    return { g, wr, wl, ph: i * 2.1, pos: new THREE.Vector3(i ? 1 : -1, 1, 3), land: 0 };
+  /* ---- the two paper-moth familiars: illustrated sprites that flap by squashing ---- */
+  const moths = [['moth-a', 0.5, 1.0, 0.86, 0.4], ['moth-b', 0.9, 0.86, 0.45, 0.38]].map(([n, w, h, bx, by], i) => {
+    const g = new THREE.Group(), sp = mesh(new THREE.PlaneGeometry(w, h), mat(null, { map: art(n), transparent: true, side: THREE.DoubleSide }));
+    sp.position.set(-(bx - 0.5) * w, -(0.5 - by) * h, 0); // centre the group on the moth's body, not the ribbon
+    g.add(sp); g.scale.setScalar(0.62); scene.add(g);
+    return { g, sp, ph: i * 2.1, pos: new THREE.Vector3(i ? 1 : -1, 1, 3) };
   });
 
   /* ---- camera path ---- */
@@ -425,11 +344,10 @@ export function createWorld(canvas, opts = {}) {
       const rev = 1 - sstep(0.3, 0.95, Math.abs(camCard - tab.idx)); tab.uReveal.value = rev;
       if (tab.frame) { const e = sstep(0, 1, rev); tab.frame.material.uniforms.uAlpha.value = sstep(0.1, 0.6, rev); tab.frame.scale.set(0.74 + 0.26 * e, 0.88 + 0.12 * e, 1); }
     }
-    jr.material.uniforms.uAlpha.value = 1 - state.lift; jl.material.uniforms.uAlpha.value = state.lift;
+    subject.position.y = subject.userData.base + state.lift * 0.1; subject.rotation.z = -state.lift * 0.012;
     if (Math.abs(state.craft - lastCraft) > 0.01) { composeBook(craftCanvas, state.craft); craftTex.needsUpdate = true; lastCraft = state.craft; }
     if (Math.abs(state.paint - lastPaint) > 0.01) { composeBook(paintCanvas, 1 + 2.4 * state.paint); paintTex.needsUpdate = true; lastPaint = state.paint; }
-    tools.forEach((t, i) => { const base = [ -1.32, -1.32, -1.32, -1.3 ][i], want = state.tool === i ? 0.28 : 0; t.position.y = lerp(t.position.y, base + want, 0.1); });
-    const tl = tools[Math.max(0, state.tool)]; toolSpark.position.set(tl.position.x, tl.position.y + 0.8, 1.2); toolSpark.visible = state.tool >= 0;
+    const tp = toolPos[Math.max(0, state.tool)]; toolSpark.position.set(tp[0], tp[1] + 0.45, 0.8); toolSpark.visible = state.tool >= 0;
     ringCards.forEach((c, k) => { c.position.y = GROUND + 1.8 + (still ? 0 : Math.sin(time * 0.6 + k) * 0.06); });
     for (const s of sparkles) s.m.scale.setScalar(still ? 1 : 0.75 + 0.25 * Math.sin(time * 1.6 + s.ph));
     hoverA = lerp(hoverA, state.hover >= 0 ? 1 : 0, 0.12);
@@ -446,7 +364,7 @@ export function createWorld(canvas, opts = {}) {
       m.pos.x = lerp(m.pos.x, tx, still ? 1 : 0.05); m.pos.y = lerp(m.pos.y, ty, still ? 1 : 0.05); m.pos.z = lerp(m.pos.z, tz, still ? 1 : 0.05);
       m.g.position.copy(m.pos); m.g.rotation.set(0, Math.sin(time * 0.6 + m.ph) * 0.4, Math.sin(time * 0.9 + m.ph) * 0.1);
       const flap = still ? 0.4 : land && m.pos.distanceTo(new THREE.Vector3(tx, ty, tz)) < 0.2 ? 0.2 + Math.sin(time * 2) * 0.15 : Math.abs(Math.sin(time * 7 + m.ph)) * 1.0;
-      m.wr.rotation.set(0, -flap, 0.35); m.wl.rotation.set(0, flap, -0.35);
+      m.sp.scale.x = 1 - 0.3 * flap;
     });
     // wallpaper: tile it to the view and slide it slightly with the camera for parallax
     bg.scale.set(2 * 60 * tanH * camera.aspect * 1.15, 2 * 60 * tanH * 1.15, 1);
