@@ -495,7 +495,7 @@ export function bookLayers(w = 512, h = 768) {
   const cols = { cols: [PAL.rust, PAL.sage, PAL.blush] }; const ptc = paint.getContext('2d');
   wash(ptc, ell(w / 2, h * 0.42, 190, 190), PAL.sage, { a: 0.45, blur: 30, edge: 0 }); emblem(ptc, 'rose', w / 2, h * 0.42, 130, { ...cols, ink: false });
   const gc = gild.getContext('2d'); gc.strokeStyle = PAL.gold; gc.lineWidth = 5; gc.strokeRect(36, 36, w - 72, h - 72); gc.lineWidth = 2; gc.strokeRect(52, 52, w - 104, h - 104);
-  gc.fillStyle = PAL.gold; gc.font = `600 44px ${SERIF}`; gc.textAlign = 'center'; gc.fillText('INKY & CO.', w / 2, h * 0.82);
+  gc.fillStyle = PAL.gold; gc.font = `600 44px ${SERIF}`; gc.textAlign = 'center'; gc.fillText('OPAL & INK', w / 2, h * 0.82);
   for (let i = 0; i < 4; i++) emblemStar(gc, 96 + (i % 2) * (w - 192), 96 + Math.floor(i / 2) * (h - 192), 16, PAL.gold, { ink: false });
   return (_layers = { prime, sketch, paint, gild, w, h });
 }

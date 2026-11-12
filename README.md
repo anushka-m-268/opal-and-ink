@@ -1,4 +1,4 @@
-# Inky & Co.: the tarot deck
+# Opal & Ink: the tarot deck
 
 A scroll-driven 3D storefront for hand-painted novels. Each section is a major-arcana card (0 The Jester, II The High Priestess, I The Magician, III The Empress, XVII The Star, XXI The World) and one camera travels through the whole deck. Plain HTML, CSS and JavaScript with no build step. Three.js r160 (MIT) is bundled in `vendor/three/`. No frameworks, trackers, remote fonts or image files: every illustration is drawn in the browser by `js/paint.js`.
 

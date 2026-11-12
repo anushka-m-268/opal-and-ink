@@ -54,7 +54,7 @@ if (REVIEWS.length) {
 }
 
 /* ---------- cart ---------- */
-const KEY = 'inky-cart-v1';
+const KEY = 'opal-ink-cart-v1';
 let cart = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '[]').filter((l) => byId(l.id) && l.qty > 0).map((l) => ({ id: l.id, qty: Math.min(l.qty, byId(l.id).stock) })).filter((l) => l.qty > 0); } catch (e) { return []; } })();
 const saveCart = () => { try { localStorage.setItem(KEY, JSON.stringify(cart)); } catch (e) { /* storage blocked: cart lasts this visit */ } };
 const count = () => cart.reduce((n, l) => n + l.qty, 0);
@@ -66,7 +66,7 @@ function addToCart(id) {
   saveCart(); renderCart(); live(`${p.title} added to your cart.`);
 }
 function orderText() {
-  return `Hello Inky & Co.,\n\nI would like to order:\n` + cart.map((l) => `- ${byId(l.id).title} x ${l.qty} (${fmt.format(byId(l.id).price * l.qty)})`).join('\n') + `\n\nTotal: ${fmt.format(subtotal())}\n\nName:\nDelivery address:\n`;
+  return `Hello Opal & Ink,\n\nI would like to order:\n` + cart.map((l) => `- ${byId(l.id).title} x ${l.qty} (${fmt.format(byId(l.id).price * l.qty)})`).join('\n') + `\n\nTotal: ${fmt.format(subtotal())}\n\nName:\nDelivery address:\n`;
 }
 function renderCart() {
   const n = count(), badge = $('#cartCount');
