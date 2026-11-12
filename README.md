@@ -37,9 +37,16 @@ Page copy, the FAQ and the maker story are in `index.html` (look for `OWNER` com
 - Pages: `index.html` is the 3D deck and `shop.html` is the product list (no 3D scene). The palette button and the cart, product, draw-a-card and policy dialogs are written once in `js/chrome.js` and added to both pages; the cart and background choice are shared through the browser's storage.
 - `js/main.js`: shop, cart (localStorage), dialogs (native `<dialog>`, so focus is trapped and Esc closes), forms, chapter rail, custom cursor, and the link from scroll position to camera shots.
 
-## Background palette
+## Palette button
 
-The round palette button (bottom left, top left on phones) lets a visitor pick a paper shade and a wallpaper texture; the choice is remembered in their browser. It recolours the page, the 3D backdrop and the paper-white of the artwork together. Add or change options in `SHADES` and `TEXTURES` in `js/main.js`; new textures are drawn in `drawWallpaper` in `js/paint.js`.
+The round palette button (bottom left, top left on phones) lets a visitor pick a paper **shade**, a wallpaper **texture**, an **accent colour** and a **cursive font** (Dancing Script, Pinyon Script or Great Vibes); the choice is remembered in their browser and shared by both pages. The default accent is teal. The artwork is painted in orange-red, so an accent re-colours only those hues, in the shader for the 3D scenes and with the same maths in `remapCanvas` for the shop covers (`js/accents.js`). Add or change options there (`SHADES`, `ACCENTS`, `FONTS`, `TEXTURES`); new textures are drawn in `drawWallpaper` in `js/paint.js`.
+
+## Transitions and motion
+
+- **Between cards:** while the camera travels, paper washes across the view through a noisy front and a stream of card backs tumbles across it (`uWipe` in the post shader and `shuffle` in `js/scene.js`).
+- **Text** enters one line at a time as its card comes into view; the shop cards deal in; moving between the home page and the shop cross-fades (CSS view transitions, Chrome and Edge).
+- The paper moths are cut down the middle of the body and each wing half hinges there, so the wings really beat. Still pictures no longer bob or sway. For true animation of the illustrations you need generated clips or sprite frames (see Art).
+- The closing spread now shows all 22 major arcana: the six painted cards in an inner ring and sixteen emblem cards in an outer ring.
 
 ## Art
 

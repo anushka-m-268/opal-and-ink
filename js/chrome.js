@@ -5,6 +5,8 @@ export const SHARED_HTML = `
 <div id="palPanel" class="palpanel ornate" hidden role="group" aria-label="Background">
   <p class="eyebrow">Shade</p><div id="shades" class="swatches"></div>
   <p class="eyebrow">Texture</p><div id="textures" class="chips"></div>
+  <p class="eyebrow">Accent</p><div id="accents" class="swatches"></div>
+  <p class="eyebrow">Font</p><div id="fonts" class="chips"></div>
 </div>
 
 <!-- cart drawer -->

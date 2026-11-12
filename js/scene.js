@@ -1,7 +1,7 @@
 /* The 3D world: six card tableaux standing in a row, one camera that travels between them,
    and a post pass that turns the render into ink line, watercolour bleed, halftone and paper. */
 import * as THREE from '../vendor/three/three.module.js';
-import { PAL, cv, rng, drawStar, drawPetal, drawWallpaper, drawCardBack, drawCover, drawEdge, drawPlate, composeBook, ARCANA } from './paint.js';
+import { PAL, cv, rng, drawStar, drawWallpaper, drawCardBack, drawCover, drawEdge, drawPlate, composeBook, emblem, ARCANA, DECK } from './paint.js';
 import { PRODUCTS } from './config.js';
 
 THREE.ColorManagement.enabled = false; // every colour in this file is used exactly as written
@@ -37,9 +37,18 @@ void main(){
 
 const FS = `
 uniform sampler2D uMap; uniform float uHasMap; uniform vec3 uColor; uniform float uLit, uMarble, uAlpha, uMask, uDot, uTime, uReveal, uOpaque;
-uniform vec4 uCard; uniform vec3 uSun; uniform vec2 uUvOff; uniform vec3 uTint;
+uniform vec4 uCard; uniform vec3 uSun; uniform vec2 uUvOff; uniform vec3 uTint; uniform vec4 uAccent;
 varying vec3 vW; varying vec3 vN; varying vec2 vUv;
 ${NOISE}
+vec3 rgb2hsv(vec3 c){ vec4 K=vec4(0.,-1./3.,2./3.,-1.); vec4 p=mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g)); vec4 q=mix(vec4(p.xyw,c.r),vec4(c.r,p.yzx),step(p.x,c.r)); float d=q.x-min(q.w,q.y); float e=1e-10; return vec3(abs(q.z+(q.w-q.y)/(6.*d+e)), d/(q.x+e), q.x); }
+vec3 hsv2rgb(vec3 c){ vec4 K=vec4(1.,2./3.,1./3.,3.); vec3 p=abs(fract(c.xxx+K.xyz)*6.-K.www); return c.z*mix(K.xxx,clamp(p-K.xxx,0.,1.),c.y); }
+vec3 accentShift(vec3 rgb){
+  if (uAccent.w < .5) return rgb;
+  vec3 h = rgb2hsv(rgb); float d = abs(h.x - .03); d = min(d, 1. - d);
+  float w = (1. - smoothstep(.022, .06, d)) * smoothstep(.18, .38, h.y);
+  h.x = mix(h.x, uAccent.x, w); h.y = min(1., h.y * mix(1., uAccent.y, w)); h.z = min(1., h.z * mix(1., uAccent.z, w));
+  return hsv2rgb(h);
+}
 float cardMask(){
   if (uMask < .5) return 1.;
   vec2 q = (vW.xy - uCard.xy) / uCard.zw;
@@ -53,7 +62,7 @@ void main(){
   float m = cardMask();
   if (m < .004) discard;
   vec4 base = vec4(uColor, 1.);
-  if (uHasMap > .5) { base = texture2D(uMap, vUv + uUvOff); base.rgb *= uColor * uTint; }
+  if (uHasMap > .5) { base = texture2D(uMap, vUv + uUvOff); base.rgb = accentShift(base.rgb) * uColor * uTint; }
   vec3 col = base.rgb;
   if (uLit > .5) {
     vec3 N = uLit > 1.5 ? normalize(cross(dFdx(vW), dFdy(vW))) : normalize(vN);
@@ -86,7 +95,7 @@ void main(){
 
 const POST_FS = `
 uniform sampler2D tColor; uniform sampler2D tDepth; uniform vec2 uRes; uniform float uNear, uFar, uTime, uPix, uSimple;
-uniform vec3 uPaper, uInk; varying vec2 vUv;
+uniform vec3 uPaper, uInk; uniform float uWipe; varying vec2 vUv;
 ${NOISE}
 float lin(vec2 uv){ float d = texture2D(tDepth, uv).x; return uNear*uFar / (uFar - d*(uFar-uNear)); }
 float lum(vec3 c){ return dot(c, vec3(.3,.59,.11)); }
@@ -114,11 +123,17 @@ void main(){
   vec2 q = (vUv - .5) * vec2(1., .92);
   float v = smoothstep(.62, .95, length(q)*1.35 + (fbm(vUv*6.) - .5)*.2);
   c = mix(c, uPaper, v*.85);
+  // ink-wash transition between cards: paper floods in through a noisy front, then drains away
+  float wn = fbm(vUv*vec2(2.6, 4.2) + vec2(1.7, .3));
+  float cover = smoothstep(wn - .1, wn + .1, uWipe*1.08);
+  float rim = smoothstep(.02, .12, cover) * (1. - smoothstep(.12, .4, cover));
+  c = mix(c, uInk, rim * .16);
+  c = mix(c, uPaper * .985, cover * .94);
   gl_FragColor = vec4(c, 1.);
 }`;
 
 /* ---------------- materials ---------------- */
-const G = { uTint: { value: new THREE.Vector3(1, 1, 1) }, uTime: { value: 0 }, uSun: { value: new THREE.Vector3(-0.5, 0.8, 0.7).normalize() }, uDot: { value: 5 } };
+const G = { uAccent: { value: new THREE.Vector4(0, 1, 1, 0) }, uTint: { value: new THREE.Vector3(1, 1, 1) }, uTime: { value: 0 }, uSun: { value: new THREE.Vector3(-0.5, 0.8, 0.7).normalize() }, uDot: { value: 5 } };
 const texCache = new Map();
 function T(canvas, key, repeat) {
   if (key && texCache.has(key)) return texCache.get(key);
@@ -176,7 +191,7 @@ export function createWorld(canvas, opts = {}) {
   const post = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: POST_FS,
     uniforms: { tColor: { value: null }, tDepth: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uNear: { value: camera.near }, uFar: { value: camera.far },
-      uTime: G.uTime, uPix: { value: 1 }, uSimple: { value: simple ? 1 : 0 }, uPaper: { value: new THREE.Color(PAL.paper) }, uInk: { value: new THREE.Color(PAL.ink) } },
+      uTime: G.uTime, uPix: { value: 1 }, uSimple: { value: simple ? 1 : 0 }, uWipe: { value: 0 }, uPaper: { value: new THREE.Color(PAL.paper) }, uInk: { value: new THREE.Color(PAL.ink) } },
     depthTest: false, depthWrite: false,
   }));
   const postScene = new THREE.Scene(); postScene.add(post);
@@ -259,9 +274,9 @@ export function createWorld(canvas, opts = {}) {
 
   /* ---- 5 · The World: a spread of cards in a ring ---- */
   const t5 = tableau(5, false), g5 = t5.g;
-  t5.uCard.value.set(5 * SP, 0, 6.6, 4.6);
+  t5.uCard.value.set(5 * SP, 0, 11, 6.6);
   const ringR = 4.2;
-  g5.add(mesh(new THREE.CircleGeometry(5.8, 48).rotateX(-Math.PI / 2), mat(t5, { color: '#DEDAD3', lit: 1, marble: 1 }), 0, GROUND, 0));
+  g5.add(mesh(new THREE.CircleGeometry(10, 64).rotateX(-Math.PI / 2), mat(t5, { color: '#DEDAD3', lit: 1, marble: 1 }), 0, GROUND, 0));
   const back = T(drawCardBack(), 'cardback');
   const faceArt = { jester: ['hero-bg', 'hero-fg'], collection: ['collection'], craft: ['craft'], commissions: ['empress'], about: ['star'], world: ['star-bg'] };
   function faceTex(a) {
@@ -269,6 +284,7 @@ export function createWorld(canvas, opts = {}) {
     const load = (n) => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = `assets/art/${n}.webp`; });
     const paint = (imgs, fr) => {
       x.fillStyle = PAL.paper; x.fillRect(0, 0, 420, 720);
+      if (!faceArt[a.id]) { x.fillStyle = PAL.paper; x.fillRect(71, 146, 278, 453); emblem(x, a.motif, 210, 372, 92, { cols: [PAL.rust, PAL.sage, PAL.blush] }); }
       for (const im of imgs) if (im) x.drawImage(im, 53, 92, 314, 562);
       if (fr) x.drawImage(fr, 0, 0, 420, 720);
       x.fillStyle = PAL.ink; x.textAlign = 'center';
@@ -276,8 +292,9 @@ export function createWorld(canvas, opts = {}) {
       x.font = '700 24px "Dancing Script", cursive'; x.fillText(a.name, 210, 666, 200);
       t.needsUpdate = true;
     };
+    const art2 = faceArt[a.id] || [];
     paint([], null);
-    Promise.all([...faceArt[a.id].map(load), load('frame')]).then((r) => paint(r.slice(0, -1), r[r.length - 1]));
+    Promise.all([...art2.map(load), load('frame')]).then((r) => paint(r.slice(0, -1), r[r.length - 1]));
     return t;
   }
   const ringCards = [];
@@ -287,22 +304,27 @@ export function createWorld(canvas, opts = {}) {
     const bk = mesh(new THREE.PlaneGeometry(2.1, 3.6), mat(t5, { map: back }), 0, 0, -0.012); bk.rotation.y = Math.PI;
     cg.add(face, bk); cg.position.set(x, GROUND + 1.8, z); cg.rotation.y = Math.atan2(Math.cos(th), Math.sin(th)); g5.add(cg); ringCards.push(cg);
   });
+  const sceneIds = new Set(ARCANA.map((a) => a.id)), outer = DECK.filter((d) => !sceneIds.has(d.id));
+  outer.forEach((a, k) => { // the other sixteen cards stand in a wider ring behind
+    const th = (k / outer.length) * Math.PI * 2 + 0.1, x = Math.cos(th) * 8.6, z = Math.sin(th) * 8.6, cg = new THREE.Group();
+    const face = mesh(new THREE.PlaneGeometry(2.1, 3.6), mat(t5, { map: faceTex(a) }), 0, 0, 0.012);
+    const bk = mesh(new THREE.PlaneGeometry(2.1, 3.6), mat(t5, { map: back }), 0, 0, -0.012); bk.rotation.y = Math.PI;
+    cg.add(face, bk); cg.position.set(x, GROUND + 1.8, z); cg.rotation.y = Math.atan2(Math.cos(th), Math.sin(th)); cg.scale.setScalar(0.92); g5.add(cg); ringCards.push(cg);
+  });
   sprite(t5, art('hero-fg'), 1.9, 3.4, 0, GROUND + 1.7, 0);
   for (let i = 0; i < 10; i++) sparkle(t5, Math.cos(i * 0.9) * 3.2, 0.3 + (i % 4) * 0.8, Math.sin(i * 0.9) * 1.5, 0.22 + (i % 3) * 0.1, i % 2 ? '#ffffff' : PAL.verm);
 
-  /* ---- the two paper-moth familiars: illustrated sprites that flap by squashing ---- */
-  const moths = [['moth-a', 0.5, 1.0, 0.86, 0.4], ['moth-b', 0.9, 0.86, 0.45, 0.38]].map(([n, w, h, bx, by], i) => {
-    const g = new THREE.Group(), sp = mesh(new THREE.PlaneGeometry(w, h), mat(null, { map: art(n), transparent: true, side: THREE.DoubleSide }));
-    sp.position.set(-(bx - 0.5) * w, -(0.5 - by) * h, 0); // centre the group on the moth's body, not the ribbon
-    g.add(sp); g.scale.setScalar(0.62); scene.add(g);
-    return { g, sp, ph: i * 2.1, pos: new THREE.Vector3(i ? 1 : -1, 1, 3) };
-  });
-
-  /* ---- drifting poppy petals: an ambient layer that follows the card in view ---- */
-  const petalMat = mat(null, { map: T(drawPetal(), 'petal'), transparent: true, side: THREE.DoubleSide });
-  const petals = Array.from({ length: mobile ? 8 : 16 }, () => {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.17), petalMat); scene.add(m);
-    return { m, x: (Math.random() - 0.5) * 7.5, y: Math.random() * 8.4 - 4.2, z: 1 + Math.random() * 2.2, sp: 0.12 + Math.random() * 0.18, ph: Math.random() * 6 };
+  /* ---- the two paper-moth familiars: the picture is cut down the middle of the body and each wing half hinges on it, so the wings really beat ---- */
+  const MB = 0.45, MW = 0.9, MH = 0.86, MBY = 0.38; // where the body sits across and down the picture, and its size in the world
+  const mothMat = mat(null, { map: art('moth-b'), transparent: true, side: THREE.DoubleSide });
+  const halfGeo = (w, u0, u1, hinge) => { const g = new THREE.PlaneGeometry(w, MH), uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setX(i, u0 + uv.getX(i) * (u1 - u0)); g.translate(hinge * w / 2, 0, 0); return g; };
+  const moths = [0, 1].map((i) => {
+    const g = new THREE.Group(), y = -(0.5 - MBY) * MH;
+    const wl = new THREE.Mesh(halfGeo(MW * MB, 0, MB, -1), mothMat), wr = new THREE.Mesh(halfGeo(MW * (1 - MB), MB, 1, 1), mothMat);
+    const body = new THREE.Mesh(halfGeo(MW * 0.1, MB - 0.05, MB + 0.05, 0), mothMat); body.position.z = 0.01;
+    for (const m of [wl, wr, body]) m.position.y = y;
+    g.add(wl, wr, body); g.scale.setScalar(i ? 0.5 : 0.62); scene.add(g);
+    return { g, wl, wr, ph: i * 2.1, pos: new THREE.Vector3(i ? 1 : -1, 1, 3) };
   });
 
   /* ---- floating objects in the margins of each card: they bob and fade with their card ---- */
@@ -313,15 +335,22 @@ export function createWorld(canvas, opts = {}) {
     [t2, 1, ['el-feather', 'el-key', 'el-lantern', 'el-tassel']], [t3, -1, ['el-poppy', 'el-bow', 'el-mirror', 'el-feather']],
     [t4, 1, ['el-moon', 'el-lantern', 'el-key', 'el-book']], [t5, 1, ['el-moon', 'el-book', 'el-tassel', 'el-bow']],
   ];
-  const FX = [2.6, 3.1, 2.7, 3.0], FY = [1.9, 0.6, -0.7, -1.9], FZ = [1.4, 1.1, 1.5, 1.2];
+  const FX = [2.5, 2.8, 2.5, 2.7], FY = [1.9, 0.6, -0.7, -1.9], FZ = [1.4, 1.1, 1.5, 1.2];
   const floaters = FSET.flatMap(([tab, sg, names]) => names.map((n, i) => {
     const [w, h] = FSIZE[n], m = mesh(new THREE.PlaneGeometry(w, h), mat(null, { map: art(n), transparent: true, side: THREE.DoubleSide, alpha: 0 }), sg * FX[i] * (tab === t5 ? 1.8 : 1), FY[i], FZ[i]);
     tab.g.add(m); return { m, tab, y0: FY[i], ph: i * 1.7 + tab.idx };
   }));
 
+  /* ---- card shuffle between tableaux: card backs sweep across the view while the camera travels ---- */
+  const shuffle = Array.from({ length: 12 }, (_, j) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.54), mat(null, { map: back, transparent: true, side: THREE.DoubleSide, alpha: 0 })); scene.add(m);
+    return { m, j };
+  });
+  const vf = new THREE.Vector3(), vr = new THREE.Vector3(), vu = new THREE.Vector3();
+
   /* ---- camera path ---- */
   let anchors = [], scrollY = 0, smoothY = 0, camCard = 0, speed = 0, lastFocusX = 0;
-  const pointer = { x: 0, y: 0 }, state = { craft: 0, paint: 0, lift: 0, hover: -1, tool: -1 };
+  const pointer = { x: 0, y: 0 }, state = { craft: 0, paint: 0, lift: 0, hover: -1, tool: -1, prog: 0, moving: false, dir: 1 };
   let size = { w: 1, h: 1, aspect: 1 }, time = 0, still = !!opts.reduced;
   const tanH = Math.tan(FOV * 0.5 * R);
   function poseCam(p) {
@@ -348,6 +377,7 @@ export function createWorld(canvas, opts = {}) {
     if (!still) { tmpF.x += pointer.x * 0.25; tmpF.y += pointer.y * 0.15; dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), pointer.x * 0.05 + Math.sin(time * 0.17) * 0.025); }
     camera.position.copy(tmpF).add(dir); camera.lookAt(tmpF);
     camCard = lerp(A.card, B.card, e);
+    state.prog = e; state.moving = A.card !== B.card; state.dir = B.card >= A.card ? 1 : -1;
     const fx = tmpF.x; speed = lerp(speed, dt > 0 ? (fx - lastFocusX) / dt : 0, 0.08); lastFocusX = fx;
     state.lift = lerp(A.lift ?? 0, B.lift ?? 0, e);
     state.craft = lerp(A.craft ?? 0, B.craft ?? 0, e);
@@ -386,17 +416,22 @@ export function createWorld(canvas, opts = {}) {
       m.pos.x = lerp(m.pos.x, tx, still ? 1 : 0.05); m.pos.y = lerp(m.pos.y, ty, still ? 1 : 0.05); m.pos.z = lerp(m.pos.z, tz, still ? 1 : 0.05);
       m.g.position.copy(m.pos); m.g.rotation.set(0, Math.sin(time * 0.6 + m.ph) * 0.4, Math.sin(time * 0.9 + m.ph) * 0.1);
       const flap = still ? 0.4 : land && m.pos.distanceTo(new THREE.Vector3(tx, ty, tz)) < 0.2 ? 0.2 + Math.sin(time * 2) * 0.15 : Math.abs(Math.sin(time * 7 + m.ph)) * 1.0;
-      m.sp.scale.x = 1 - 0.3 * flap;
+      m.wl.rotation.y = flap * 0.9; m.wr.rotation.y = -flap * 0.9;
     });
-    for (const p of petals) {
-      if (!still) { p.y -= p.sp * dt; if (p.y < -4.3) p.y = 4.3; }
-      p.m.position.set(camCard * SP + p.x + Math.sin(time * 0.5 + p.ph) * 0.35, p.y, p.z);
-      p.m.rotation.set(time * 0.6 + p.ph, 0, time * 0.4 + p.ph * 2);
-    }
     for (const f of floaters) {
       f.m.material.uniforms.uAlpha.value = sstep(0.15, 0.7, f.tab.uReveal.value);
-      if (!still) { f.m.position.y = f.y0 + Math.sin(time * 0.7 + f.ph) * 0.09; f.m.rotation.z = Math.sin(time * 0.5 + f.ph) * 0.06; }
     }
+    camera.getWorldDirection(vf); vr.set(1, 0, 0).applyQuaternion(camera.quaternion); vu.set(0, 1, 0).applyQuaternion(camera.quaternion);
+    for (const c of shuffle) {
+      const u = state.prog * 1.7 - c.j * 0.065, d = 5.5 + (c.j % 4) * 0.9, hh = Math.tan(FOV * 0.5 * R) * d;
+      const on = !still && state.moving && u > 0 && u < 1;
+      c.m.material.uniforms.uAlpha.value = on ? sstep(0, 0.12, u) * (1 - sstep(0.88, 1, u)) : 0;
+      if (!on) continue;
+      const x = state.dir * (u * 2 - 1) * 1.35, y = Math.sin(c.j * 2.3) * 0.42 + Math.sin(u * 6 + c.j) * 0.07;
+      c.m.position.copy(camera.position).addScaledVector(vf, d).addScaledVector(vr, x * hh * camera.aspect).addScaledVector(vu, y * hh);
+      c.m.quaternion.copy(camera.quaternion); c.m.rotateY(u * 7 + c.j); c.m.rotateZ(Math.sin(c.j) * 0.5); c.m.scale.setScalar(d / 8);
+    }
+    post.material.uniforms.uWipe.value = !still && state.moving ? sstep(0.1, 0.85, Math.sin(Math.PI * state.prog)) : 0;
     // wallpaper: tile it to the view and slide it slightly with the camera for parallax
     bg.scale.set(2 * 60 * tanH * camera.aspect * 1.15, 2 * 60 * tanH * 1.15, 1);
     bgMat.uniforms.uUvOff.value.set(camera.position.x * 0.02, 0);
@@ -430,8 +465,9 @@ export function createWorld(canvas, opts = {}) {
   resize();
 
   /* background look: paper shade (also tints the art's paper-white) and wallpaper texture */
-  function setTheme({ paper, pattern, line }) {
+  function setTheme({ paper, pattern, line, accent }) {
     const c = new THREE.Color(paper);
+    if (accent) G.uAccent.value.set(accent.hue || 0, accent.sat || 1, accent.val || 1, accent.off ? 0 : 1);
     clearHex = paper; post.material.uniforms.uPaper.value.copy(c);
     G.uTint.value.set(c.r / 0.9255, c.g / 0.9216, c.b / 0.9098); // the art is balanced to #ECEBE8
     bgMat.uniforms.uMap.value = T(drawWallpaper(pattern, line), `wall-${pattern}-${line}`, true);
@@ -439,7 +475,7 @@ export function createWorld(canvas, opts = {}) {
   }
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
   return {
-    setTheme,
+    setTheme, moths,
     start, stop, resize, state, still: (v) => { still = v; if (v) { stop(); step(0); draw(); } else start(); },
     setAnchors: (a) => { anchors = a; },
     setScroll: (y, snap) => { scrollY = y; if (snap || still) { smoothY = y; } if (still) { step(0); draw(); } },

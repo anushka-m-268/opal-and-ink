@@ -437,7 +437,7 @@ export function drawCardBack(w = 280, h = 480) {
 }
 
 /* ---------- emblems: one small painted motif per idea, used on covers and card faces ---------- */
-function emblem(c, motif, cx, cy, r, o = {}) {
+export function emblem(c, motif, cx, cy, r, o = {}) {
   const P = (path, col, w = 2.4) => { if (o.wash !== false) wash(c, path, col, { a: 0.85, blur: 5 }); if (o.ink !== false) ink(c, path, w, o.inkA ?? 0.85); };
   const col = o.cols || [PAL.rust, PAL.sage, PAL.blush];
   switch (motif) {
@@ -550,4 +550,19 @@ export const ARCANA = [
   { id: 'commissions', numeral: 'III', name: 'The Empress', motif: 'poppy' },
   { id: 'about', numeral: 'XVII', name: 'The Star', motif: 'star' },
   { id: 'world', numeral: 'XXI', name: 'The World', motif: 'wreath' },
+];
+
+/* the whole major arcana: the six with painted scenes (ids match ARCANA) plus sixteen emblem cards for the closing spread */
+export const DECK = [
+  { id: 'jester', numeral: '0', name: 'The Jester', motif: 'star' }, { id: 'craft', numeral: 'I', name: 'The Magician', motif: 'quill' },
+  { id: 'collection', numeral: 'II', name: 'The High Priestess', motif: 'moon' }, { id: 'commissions', numeral: 'III', name: 'The Empress', motif: 'poppy' },
+  { id: 'emperor', numeral: 'IV', name: 'The Emperor', motif: 'tower' }, { id: 'hierophant', numeral: 'V', name: 'The Hierophant', motif: 'key' },
+  { id: 'lovers', numeral: 'VI', name: 'The Lovers', motif: 'rose' }, { id: 'chariot', numeral: 'VII', name: 'The Chariot', motif: 'bird' },
+  { id: 'strength', numeral: 'VIII', name: 'Strength', motif: 'poppy' }, { id: 'hermit', numeral: 'IX', name: 'The Hermit', motif: 'candle' },
+  { id: 'wheel', numeral: 'X', name: 'Wheel of Fortune', motif: 'star' }, { id: 'justice', numeral: 'XI', name: 'Justice', motif: 'quill' },
+  { id: 'hanged', numeral: 'XII', name: 'The Hanged Man', motif: 'bird' }, { id: 'death', numeral: 'XIII', name: 'Death', motif: 'rose' },
+  { id: 'temperance', numeral: 'XIV', name: 'Temperance', motif: 'moon' }, { id: 'devil', numeral: 'XV', name: 'The Devil', motif: 'key' },
+  { id: 'tower', numeral: 'XVI', name: 'The Tower', motif: 'tower' }, { id: 'about', numeral: 'XVII', name: 'The Star', motif: 'star' },
+  { id: 'moon', numeral: 'XVIII', name: 'The Moon', motif: 'moon' }, { id: 'sun', numeral: 'XIX', name: 'The Sun', motif: 'star' },
+  { id: 'judgement', numeral: 'XX', name: 'Judgement', motif: 'eye' }, { id: 'world', numeral: 'XXI', name: 'The World', motif: 'wreath' },
 ];

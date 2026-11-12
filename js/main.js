@@ -1,6 +1,7 @@
 /* Page behaviour: shop, cart, dialogs, forms, chapter rail, and the scroll-to-camera link. */
 import { CONFIG, PRODUCTS, REVIEWS, BOOK_DETAILS } from './config.js';
 import { SHARED_HTML } from './chrome.js';
+import { SHADES, TEXTURES, ACCENTS, FONTS, accentOf, loadLook, saveLook, remapCanvas } from './accents.js';
 import { ARCANA, drawWallpaper, drawCover, drawCardBack, drawCardFace, drawJester, drawMoth, wash, ink, PAL, cv } from './paint.js';
 
 document.body.insertAdjacentHTML('beforeend', SHARED_HTML);
@@ -17,7 +18,12 @@ let world = null;
 // the canvas art writes titles with these faces, so wait for them (a missing font just falls back)
 try { await Promise.all(['700 16px "Dancing Script"', '500 16px "Dancing Script"'].map((f) => document.fonts.load(f))); } catch (e) { /* fall back to system serif */ }
 const frameUrl = 'assets/art/frame.webp'; // the illustrated frame, same as in the 3D scenes
-const cover = Object.fromEntries(PRODUCTS.map((p) => [p.id, drawCover(p, 320, 480, { plain: true }).toDataURL('image/jpeg', 0.88)]));
+let look = loadLook();
+const cover = {};
+function buildCovers() { // painted in the original colours, then re-coloured to the chosen accent
+  for (const p of PRODUCTS) { const c = drawCover(p, 320, 480, { plain: true }); remapCanvas(c, accentOf(look.accent)); cover[p.id] = c.toDataURL('image/jpeg', 0.88); }
+}
+buildCovers();
 {
   const corner = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><g fill='none' stroke='#3A2F2C' stroke-width='1' stroke-linecap='round'><path d='M3 3h20M3 3v20' opacity='.6'/><path d='M8 8c0-4 7-5 8-1s-4 6-7 4' /><path d='M8 8c4 0 5 7 1 8s-6-4-4-7'/><path d='M20 12c4 0 9 3 8 8' stroke='#B8B2AC' stroke-width='3'/><path d='M12 20c0 4 3 9 8 8' stroke='#B8B2AC' stroke-width='3'/></g></svg>`;
   document.documentElement.style.setProperty('--c1', `url("data:image/svg+xml,${encodeURIComponent(corner)}")`);
@@ -43,14 +49,20 @@ $$('.reveal').forEach((h) => {
 const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && e.target.classList.add('in')), { threshold: 0.4 });
 $$('.reveal').forEach((h) => io.observe(h));
 
+/* ---------- text blocks enter one line at a time as their card comes into view ---------- */
+if (reduced) document.documentElement.classList.add('reduced');
+$$('.stage').forEach((st) => st.querySelectorAll('.copy > *').forEach((el, k) => el.setAttribute("style", "--k:" + k)));
+const seen = new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle('seen', e.isIntersecting)), { threshold: 0.2 });
+$$('.stage').forEach((st) => seen.observe(st));
+
 /* ---------- shop ---------- */
 const byId = (id) => PRODUCTS.find((p) => p.id === id);
 function tarotFace(p, i, asButton = true) {
-  const inner = `<img class="cardart" src="${frameUrl}" alt=""><span class="num">${esc(p.numeral)}</span><img class="cover" src="${cover[p.id]}" alt="Painted cover of ${esc(p.title)}"><span class="banner">${esc(p.title)}</span>`;
+  const inner = `<img class="cardart" src="${frameUrl}" alt=""><span class="num">${esc(p.numeral)}</span><img class="cover" data-pid="${p.id}" src="${cover[p.id]}" alt="Painted cover of ${esc(p.title)}"><span class="banner">${esc(p.title)}</span>`;
   return asButton ? `<button class="tface" type="button" data-open="${i}" aria-label="${esc(p.title)} by ${esc(p.author)}, ${fmt.format(p.price)}. Turn the card over.">${inner}</button>` : `<div class="tface" role="img" aria-label="${esc(p.title)}">${inner}</div>`;
 }
 if ($('#grid')) {
-$('#grid').innerHTML = PRODUCTS.map((p, i) => `<article class="tcard" data-i="${i}">${tarotFace(p, i)}
+$('#grid').innerHTML = PRODUCTS.map((p, i) => `<article class="tcard" data-i="${i}" style="--i:${i}">${tarotFace(p, i)}
   <div class="meta"><span>${fmt.format(p.price)}</span><span class="ed">${esc(p.edition)}</span></div>
   ${p.stock > 0 ? `<button class="btn small solid" type="button" data-add="${p.id}">Add to Cart</button>` : '<span class="sold">Sold</span>'}</article>`).join('');
 if (REVIEWS.length) {
@@ -147,7 +159,7 @@ async function submit(form, statusEl, { endpoint, mailto, okText, required }) {
 $('#commissionForm')?.addEventListener('submit', (e) => {
   e.preventDefault();
   submit(e.target, $('#cStatus'), { endpoint: CONFIG.formEndpoint, required: ['name', 'email', 'message'], okText: 'Thank you. We have opened your email app with the details. Send it and we will reply with a sketch plan.',
-    mailto: (d) => `mailto:${CONFIG.contactEmail}?subject=${encodeURIComponent('Commission inquiry: ' + (d.book || 'new book'))}&body=${encodeURIComponent(`Name: ${d.name}\nEmail: ${d.email}\nBook: ${d.book}\nStyle notes: ${d.style}\nBudget: ${d.budget}\n\n${d.message}`)}` });
+    mailto: (d) => `mailto:${CONFIG.contactEmail}?subject=${encodeURIComponent('Commission inquiry: ' + (d.book || 'new book'))}&body=${encodeURIComponent(`Name: ${d.name}\nEmail: ${d.email}\nBook: ${d.book}\nStyle notes: ${d.notes}\nBudget: ${d.budget}\n\n${d.message}`)}` });
 });
 $('#newsForm')?.addEventListener('submit', (e) => {
   e.preventDefault();
@@ -188,38 +200,38 @@ document.addEventListener('click', (e) => {
 });
 $$('.tcard').forEach((c) => { const i = +c.dataset.i; ['mouseenter', 'focusin'].forEach((ev) => c.addEventListener(ev, () => world?.setHover(i))); ['mouseleave', 'focusout'].forEach((ev) => c.addEventListener(ev, () => world?.setHover(-1))); });
 
-/* ---------- background look: shade + texture, remembered between visits ---------- */
-const SHADES = [
-  { id: 'paper', name: 'Paper', paper: '#ECEBE8', line: '#B8B2AC' },
-  { id: 'parchment', name: 'Parchment', paper: '#EFE5D3', line: '#BBA98C' },
-  { id: 'mist', name: 'Mist', paper: '#E2E9EC', line: '#A5B7BE' },
-  { id: 'blush', name: 'Blush', paper: '#F2E3E0', line: '#CBA8A2' },
-  { id: 'sage', name: 'Sage', paper: '#E1E8E0', line: '#9FB4A7' },
-  { id: 'dusk', name: 'Dusk', paper: '#D9D2CB', line: '#A29890' },
-];
-const TEXTURES = [['leaves', 'Leaves'], ['lattice', 'Lattice'], ['dots', 'Dots'], ['linen', 'Linen'], ['plain', 'Plain']];
-const LOOK_KEY = 'opal-ink-look-v1';
-let look = (() => { try { const l = JSON.parse(localStorage.getItem(LOOK_KEY) || '{}'); return { shade: SHADES.some((x) => x.id === l.shade) ? l.shade : 'paper', pattern: TEXTURES.some((x) => x[0] === l.pattern) ? l.pattern : 'leaves' }; } catch (e) { return { shade: 'paper', pattern: 'leaves' }; } })();
+/* ---------- background look: shade, texture, accent and font, remembered between visits ---------- */
 $('#shades').innerHTML = SHADES.map((s) => `<button type="button" class="sw" data-shade="${s.id}" style="--c:${s.paper}" aria-label="${s.name} background" title="${s.name}"></button>`).join('');
 $('#textures').innerHTML = TEXTURES.map(([id, name]) => `<button type="button" class="chip" data-texture="${id}">${name}</button>`).join('');
+$('#accents').innerHTML = ACCENTS.map((a) => `<button type="button" class="sw" data-accent="${a.id}" style="--c:${a.main}" aria-label="${a.name} accent" title="${a.name}"></button>`).join('');
+$('#fonts').innerHTML = FONTS.map((f) => `<button type="button" class="chip" data-font="${f.id}" style="font-family:${f.css}, cursive">${f.name}</button>`).join('');
+let coversFor = look.accent;
 function applyLook() {
-  const s = SHADES.find((x) => x.id === look.shade);
-  document.documentElement.style.setProperty('--paper', s.paper);
+  const s = SHADES.find((x) => x.id === look.shade), acc = accentOf(look.accent), f = FONTS.find((x) => x.id === look.font), root = document.documentElement.style;
+  root.setProperty('--paper', s.paper);
+  root.setProperty('--rust', acc.main); root.setProperty('--verm', acc.light); root.setProperty('--poppy', acc.dark);
+  root.setProperty('--serif', `${f.css}, 'Dancing Script', 'Brush Script MT', cursive`);
   $('meta[name="theme-color"]').content = s.paper;
   $$('[data-shade]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.shade === look.shade)));
   $$('[data-texture]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.texture === look.pattern)));
-  world?.setTheme({ paper: s.paper, pattern: look.pattern, line: s.line });
+  $$('[data-accent]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.accent === look.accent)));
+  $$('[data-font]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.font === look.font)));
+  world?.setTheme({ paper: s.paper, pattern: look.pattern, line: s.line, accent: acc });
   if (!$('#world')) { // no 3D backdrop on this page: tile the same wallpaper behind the content
     document.body.style.backgroundImage = look.pattern === 'plain' ? 'none' : `url(${drawWallpaper(look.pattern, s.line).toDataURL()})`;
     document.body.style.backgroundSize = '340px';
   }
-  try { localStorage.setItem(LOOK_KEY, JSON.stringify(look)); } catch (e) { /* storage blocked: the look lasts this visit */ }
+  if (coversFor !== look.accent) { coversFor = look.accent; buildCovers(); $$('img.cover[data-pid]').forEach((i) => { i.src = cover[i.dataset.pid]; }); renderCart(); }
+  saveLook(look);
 }
 $('#palBtn').addEventListener('click', () => { const open = $('#palPanel').hidden; $('#palPanel').hidden = !open; $('#palBtn').setAttribute('aria-expanded', String(open)); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#palPanel').hidden) { $('#palPanel').hidden = true; $('#palBtn').setAttribute('aria-expanded', 'false'); $('#palBtn').focus(); } });
 $('#palPanel').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.shade) look.shade = b.dataset.shade; if (b.dataset.texture) look.pattern = b.dataset.texture;
+  if (b.dataset.shade) look.shade = b.dataset.shade;
+  if (b.dataset.texture) look.pattern = b.dataset.texture;
+  if (b.dataset.accent) look.accent = b.dataset.accent;
+  if (b.dataset.font) look.font = b.dataset.font;
   applyLook();
 });
 applyLook();
@@ -243,7 +255,7 @@ const ANCH = [
   ['#commForm', { card: 3, side: 'right', paint: 1, dist: 0.96 }],
   ['#about', { card: 4, side: 'left', yaw: 0.05 }],
   ['#worldClose', { card: 5, side: 'left', focusZ: 4.2, fitW: 2.9, fitH: 5.2, yaw: 0 }],
-  ['#worldFar', { card: 5, side: 'center', pitch: 0.42, fitW: 11.5, fitH: 8.4 }],
+  ['#worldFar', { card: 5, side: 'center', pitch: 0.5, fitW: 20, fitH: 13 }],
 ];
 let anchors = [], snapIdx = -1;
 function measure() {
