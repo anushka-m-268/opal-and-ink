@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thornquill Bindery | Hand-painted novels</title>
+<meta name="description" content="Thornquill Bindery paints novels by hand: painted covers, painted page edges and illustrated plates, one spine at a time.">
+<meta name="theme-color" content="#ECEBE8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23ECEBE8'/%3E%3Cpath d='M16 3l2.6 10.4L29 16l-10.4 2.6L16 29l-2.6-10.4L3 16l10.4-2.6z' fill='%23C9542F'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<canvas id="world" aria-hidden="true"></canvas>
+<div id="loading" class="loading" role="status"><span>Shuffling the deck&hellip;</span></div>
+<div id="cursor" class="cursor" aria-hidden="true"></div>
+<div id="live" class="sr" aria-live="polite"></div>
+
+<header class="top">
+  <a class="mark" href="#hero" aria-label="Thornquill Bindery, back to the top"><span>Thornquill</span> Bindery</a>
+  <nav id="nav" class="nav" aria-label="Main">
+    <a href="#shop">Shop</a><a href="#commissions">Commissions</a><a href="#craft">Our Craft</a><a href="#about">About</a><a href="#faq">FAQ</a><a href="#contact">Contact</a>
+  </nav>
+  <div class="tools">
+    <button id="cartBtn" class="iconbtn" type="button" aria-label="Open cart, 0 items"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M5 8h14l-1.2 11H6.2L5 8z"/><path d="M9 8V6.5a3 3 0 016 0V8"/></svg><span id="cartCount" class="count" hidden>0</span></button>
+    <button id="menuBtn" class="iconbtn menu" type="button" aria-expanded="false" aria-controls="nav" aria-label="Menu"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16M4 16h16"/></svg></button>
+  </div>
+</header>
+
+<nav id="rail" class="rail" aria-label="Chapters"></nav>
+
+<main id="main">
+  <!-- 0 · The Jester -->
+  <section id="hero" class="stage left" aria-labelledby="h-hero">
+    <div class="copy">
+      <p class="eyebrow">0 &middot; The Jester</p>
+      <h1 id="h-hero" class="reveal">Thornquill Bindery</h1>
+      <p class="lede">Novels painted by hand, one spine at a time.</p>
+      <p class="cta"><a class="btn solid" href="#shop">Browse the Collection</a><a class="btn" href="#commissions">Commission a Book</a></p>
+    </div>
+  </section>
+
+  <!-- II · The High Priestess -->
+  <section id="collection" class="stage right" aria-labelledby="h-coll">
+    <div class="copy">
+      <p class="eyebrow">II &middot; The High Priestess</p>
+      <h2 id="h-coll" class="reveal">The Collection</h2>
+      <p>Seven hand-bound editions rest on marble plinths. Hover a book to see it closer, or draw a card and let the deck choose for you.</p>
+      <p class="cta"><a class="btn solid" href="#shop">See every book</a><button class="btn" type="button" data-draw>Draw a Card</button></p>
+    </div>
+  </section>
+
+  <section id="shop" class="panel" aria-labelledby="h-shop">
+    <div class="inner">
+      <p class="eyebrow">The Deck</p>
+      <h2 id="h-shop">Every book, one card each</h2>
+      <p class="muted">Each edition is an unofficial hand-bound copy made from a lawfully purchased book, with original artwork by the bindery. Select a card to turn it over.</p>
+      <div id="grid" class="tgrid"></div>
+      <div id="reviews" class="reviews" hidden>
+        <h3>Reviews</h3>
+        <ul id="reviewList"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- I · The Magician -->
+  <section id="craft" aria-labelledby="h-craft">
+    <div class="stage left step" id="step1"><div class="copy">
+      <p class="eyebrow">I &middot; The Magician &middot; Our craft</p>
+      <h2 id="h-craft" class="reveal">Priming</h2>
+      <p>Each cover board is sized and primed first, so pigment sits on the surface and does not sink into the cloth. A coat of size and varnish makes the ground.</p>
+      <p class="stepno">Step 1 of 4</p>
+    </div></div>
+    <div class="stage left step" id="step2"><div class="copy">
+      <p class="eyebrow">I &middot; The Magician &middot; Our craft</p>
+      <h2 class="reveal">Sketching</h2>
+      <p>A loose ink drawing finds the composition. It is drawn fresh for every book, in our own hand, and never traced from official cover art.</p>
+      <p class="stepno">Step 2 of 4</p>
+    </div></div>
+    <div class="stage left step" id="step3"><div class="copy">
+      <p class="eyebrow">I &middot; The Magician &middot; Our craft</p>
+      <h2 class="reveal">Painting</h2>
+      <p>Gouache and watercolour go on in thin washes, left to bleed softly past the line. The edges of the pages are painted in the same palette.</p>
+      <p class="stepno">Step 3 of 4</p>
+    </div></div>
+    <div class="stage left step" id="step4"><div class="copy">
+      <p class="eyebrow">I &middot; The Magician &middot; Our craft</p>
+      <h2 class="reveal">Gilding</h2>
+      <p>Gold leaf is laid by hand on the frame and the title, then the whole book is sealed with a thin coat of varnish.</p>
+      <p class="stepno">Step 4 of 4</p>
+    </div></div>
+  </section>
+
+  <!-- III · The Empress -->
+  <section id="commissions" aria-labelledby="h-comm">
+    <div class="stage right" id="commIntro"><div class="copy">
+      <p class="eyebrow">III &middot; The Empress</p>
+      <h2 id="h-comm" class="reveal">Commission a Book</h2>
+      <p>Send us a book you love, or a story you want to hold. We will sketch it, paint it, and bind it into something that is only yours. Watch the blank book on the lectern fill with colour as you scroll.</p>
+    </div></div>
+    <div class="stage right" id="commForm"><div class="copy formcopy">
+      <form id="commissionForm" class="ornate formpanel" novalidate>
+        <h3>Tell us about your book</h3>
+        <div class="field"><label for="cName">Name</label><input id="cName" name="name" autocomplete="name" required></div>
+        <div class="field"><label for="cEmail">Email</label><input id="cEmail" name="email" type="email" autocomplete="email" required></div>
+        <div class="field"><label for="cBook">Book title</label><input id="cBook" name="book"></div>
+        <div class="field"><label for="cStyle">Style notes</label><input id="cStyle" name="style" placeholder="Colours, mood, motifs"></div>
+        <div class="field"><label for="cBudget">Budget</label><select id="cBudget" name="budget"><option value="">Prefer not to say</option><option>Under 3,000</option><option>3,000 to 5,000</option><option>5,000 and above</option></select></div>
+        <div class="field"><label for="cMsg">Message</label><textarea id="cMsg" name="message" rows="4" required></textarea></div>
+        <p id="cStatus" class="status" role="status"></p>
+        <button class="btn solid" type="submit">Send inquiry</button>
+      </form>
+    </div></div>
+  </section>
+
+  <!-- XVII · The Star -->
+  <section id="about" class="stage left" aria-labelledby="h-about">
+    <div class="copy">
+      <p class="eyebrow">XVII &middot; The Star</p>
+      <h2 id="h-about" class="reveal">The maker</h2>
+      <!-- OWNER: replace this draft with your own story. -->
+      <p>Thornquill Bindery is a small studio that rebinds and paints novels by hand. Every book starts as a story someone loves and ends as an object meant to be kept: resewn, cased in cloth, painted, gilded and sealed.</p>
+      <p>Each design is drawn from scratch, inspired by the mood of a book and never copied from its official art.</p>
+      <div class="photo" role="img" aria-label="Photo of the maker goes here"><span>Photo of the maker</span></div>
+    </div>
+  </section>
+
+  <section id="faq" class="panel" aria-labelledby="h-faq">
+    <div class="inner narrow">
+      <p class="eyebrow">Questions</p>
+      <h2 id="h-faq">Frequently asked</h2>
+      <!-- OWNER: edit these answers to match how you work. -->
+      <details name="faq"><summary>Are these official editions?</summary><p>No. Every book is an unofficial hand-bound edition made from a lawfully purchased copy, with original artwork by the bindery. Nothing is licensed or endorsed by an author or publisher.</p></details>
+      <details name="faq"><summary>How long does a commission take?</summary><p>Usually three to five weeks from an approved sketch, depending on the design. We will confirm a date before you pay.</p></details>
+      <details name="faq"><summary>Can you work from a book I already own?</summary><p>Yes. Send it to us and we will rebind and paint it. We will agree the design with you first.</p></details>
+      <details name="faq"><summary>Do you ship outside India?</summary><p>For now we ship within India. Nearby countries may follow later.</p></details>
+      <details name="faq"><summary>How should I care for a painted book?</summary><p>Keep it out of direct sun and damp, and dust it with a dry soft brush. Painted edges are sealed but not waterproof.</p></details>
+      <details name="faq"><summary>Can I return a book?</summary><p>Ready-made books can be returned in their original condition within seven days of delivery. Commissions are made for you and cannot be returned, but we will fix anything that is wrong.</p></details>
+    </div>
+  </section>
+
+  <!-- XXI · The World -->
+  <section id="world-sec" aria-labelledby="h-world">
+    <div class="stage left" id="worldClose"><div class="copy">
+      <p class="eyebrow">XXI &middot; The World</p>
+      <h2 id="h-world" class="reveal">The whole deck</h2>
+    </div></div>
+    <div class="stage center end" id="worldFar"><div class="copy">
+      <p>Join the list for new editions and open commission slots. No spam, and you can leave any time.</p>
+      <form id="newsForm" class="newsform" novalidate>
+        <label class="sr" for="nEmail">Email address</label>
+        <input id="nEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+        <button class="btn solid" type="submit">Join</button>
+      </form>
+      <p id="nStatus" class="status" role="status"></p>
+      <p class="cta"><a class="btn" href="#shop">Browse the Collection</a></p>
+    </div></div>
+  </section>
+</main>
+
+<footer id="contact" class="foot">
+  <div class="inner">
+    <div><p class="mark big"><span>Thornquill</span> Bindery</p><p class="muted">Novels painted by hand, one spine at a time.</p></div>
+    <div><h3>Contact</h3><p><a id="mailLink" href="#">hello</a></p><ul id="social" class="plain"></ul></div>
+    <div><h3>Shop notes</h3><ul class="plain"><li><button class="link" type="button" data-policy="shipping">Shipping</button></li><li><button class="link" type="button" data-policy="returns">Returns</button></li><li><button class="link" type="button" data-policy="privacy">Privacy</button></li></ul></div>
+  </div>
+  <p class="copy-right">&copy; <span id="year">2026</span> Thornquill Bindery. All artwork is original.</p>
+</footer>
+
+<!-- cart drawer -->
+<dialog id="cart" class="drawer ornate" aria-labelledby="cartTitle">
+  <div class="dhead"><h2 id="cartTitle">Your satchel</h2><button class="iconbtn" type="button" data-close aria-label="Close cart"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>
+  <div id="cartBody"></div>
+</dialog>
+
+<!-- product: the card flips to show the 3D book -->
+<dialog id="product" class="pdlg" aria-labelledby="pTitle">
+  <button class="iconbtn close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+  <div class="flip" id="flip">
+    <div class="flip-inner">
+      <div class="fface front"><div id="pFront"></div></div>
+      <div class="fface back ornate">
+        <div class="viewer"><canvas id="pCanvas" aria-label="3D book. Drag to turn it, click to open the cover." role="img"></canvas><p class="hint">Drag to turn. Click to open.</p><div class="vbtns"><button class="btn small" type="button" id="pOpen">Open the cover</button></div></div>
+        <div class="details">
+          <p class="eyebrow" id="pNum"></p><h2 id="pTitle"></h2><p class="author" id="pAuthor"></p>
+          <p id="pBlurb"></p>
+          <dl id="pDl"></dl>
+          <p class="price" id="pPrice"></p>
+          <p class="cta"><button class="btn solid" type="button" id="pAdd">Add to Cart</button></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- draw a card -->
+<dialog id="draw" class="pdlg small ornate" aria-labelledby="dTitle">
+  <button class="iconbtn close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+  <h2 id="dTitle">Draw a card</h2>
+  <p class="muted">A playful way to pick a book. Not a prediction.</p>
+  <div id="deck" class="deck" aria-hidden="true"></div>
+  <div id="dResult" class="dresult" aria-live="polite"></div>
+  <p class="cta"><button class="btn solid" type="button" id="dGo">Shuffle and draw</button></p>
+</dialog>
+
+<dialog id="policy" class="pdlg small ornate" aria-labelledby="polTitle">
+  <button class="iconbtn close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+  <h2 id="polTitle"></h2><div id="polBody"></div>
+</dialog>
+
+<noscript><p class="noscript">Thornquill Bindery needs JavaScript for the shop and the 3D deck. Email us to order or commission a book.</p></noscript>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

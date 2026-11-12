@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Page not found | Thornquill Bindery</title>
+<meta name="robots" content="noindex">
+<!-- On GitHub Pages this file is served for any unknown address, so work out the site root first (user.github.io/repo/ or a custom domain). -->
+<script>
+  (function () {
+    var seg = location.pathname.split('/').filter(Boolean), gh = /\.github\.io$/.test(location.hostname);
+    var root = '/' + (gh && seg.length ? seg[0] + '/' : '');
+    document.write('<base href="' + root + '">');
+  })();
+</script>
+<link rel="stylesheet" href="css/styles.css">
+<style>
+  body { display: grid; place-items: center; min-height: 100vh; padding: 24px; text-align: center; }
+  .nf { position: relative; max-width: 34rem; }
+  .nf .cards { position: absolute; inset: -30px -80px; pointer-events: none; }
+  .nf .cards i { position: absolute; width: 54px; height: 92px; background: var(--c-back) center / cover; border: 1px solid var(--ink); border-radius: 3px; }
+  .nf .cards i:nth-child(1) { left: 6%; top: 6%; transform: rotate(-18deg); }
+  .nf .cards i:nth-child(2) { right: 4%; top: 14%; transform: rotate(14deg); }
+  .nf .cards i:nth-child(3) { left: 14%; bottom: 4%; transform: rotate(9deg); }
+  .nf .cards i:nth-child(4) { right: 16%; bottom: 0; transform: rotate(-12deg); }
+  .nf img.j { width: min(260px, 60vw); margin: 0 auto; position: relative; }
+  h1 { font-size: clamp(2.4rem, 8vw, 4rem); }
+</style>
+</head>
+<body>
+<main class="nf">
+  <div class="cards" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <img id="jester" class="j" alt="The Jester shrugging among scattered cards" width="260" height="260">
+  <p class="eyebrow">Card not found</p>
+  <h1>Nothing here but scattered cards</h1>
+  <p>The page you were looking for has wandered off. Try the front of the deck.</p>
+  <p class="cta" style="justify-content:center"><a class="btn solid" href="./">Back to Thornquill Bindery</a></p>
+</main>
+<script type="module">
+  import { drawJester, drawCardBack } from './js/paint.js';
+  document.getElementById('jester').src = drawJester('shrug', 520).toDataURL();
+  document.documentElement.style.setProperty('--c-back', 'url(' + drawCardBack(160, 280).toDataURL() + ')');
+</script>
+</body>
+</html>

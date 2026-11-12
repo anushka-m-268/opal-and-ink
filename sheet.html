@@ -1,0 +1,25 @@
+<!doctype html>
+<meta charset="utf-8"><title>Thornquill model sheet</title>
+<style>
+  body{margin:0;padding:16px;background:#ECEBE8;font:13px system-ui;color:#3A2F2C}
+  .row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px;align-items:flex-start}
+  figure{margin:0}canvas{display:block;background:#E3E0DA;border:1px solid #CFCAC4}
+</style>
+<h3>Model sheet: Jester poses, familiars, flora, frame, covers, cards</h3>
+<div class="row" id="a"></div><div class="row" id="b"></div><div class="row" id="c"></div>
+<script type="module">
+import * as P from './js/paint.js';
+import { PRODUCTS } from './js/config.js';
+const add = (id, cnv, w, label) => { const f = document.createElement('figure'); cnv.style.width = w + 'px'; cnv.style.height = (cnv.height / cnv.width * w) + 'px'; f.append(cnv, label); document.getElementById(id).append(f); };
+const t0 = performance.now();
+for (const k of Object.keys(P.JESTER_POSES)) add('a', P.drawJester(k, 1024), 300, k);
+const m = P.drawMoth(); add('b', m.wing, 160, 'moth wing'); add('b', m.body, 120, 'moth body');
+add('b', P.drawFlora('poppies', 1), 200, 'poppies'); add('b', P.drawFlora('roses', 2), 200, 'roses'); add('b', P.drawFlora('grass', 3), 200, 'grass');
+add('b', P.drawStar(P.PAL.verm), 80, 'star'); add('b', P.drawFrame(), 200, 'frame'); add('b', P.drawCardBack(), 150, 'card back');
+add('c', P.drawWallpaper(), 200, 'wallpaper');
+PRODUCTS.slice(0, 4).forEach((p) => add('c', P.drawCover(p), 150, p.motif));
+add('c', P.drawEdge(PRODUCTS[0]), 40, 'edge'); add('c', P.drawPlate(PRODUCTS[1]), 150, 'plate');
+P.ARCANA.slice(0, 3).forEach((a) => add('c', P.drawCardFace(a), 140, a.name));
+const o = document.createElement('canvas'); o.width = 512; o.height = 768; P.composeBook(o, 3.4); add('c', o, 150, 'book stage 3.4');
+document.title = 'ok ' + Math.round(performance.now() - t0) + 'ms';
+</script>
