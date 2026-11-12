@@ -42,3 +42,7 @@ Subject: a tall narrow ornate rococo picture frame in pale grey wash with fine i
 
 - Background: remove the jester, book stack, paintbrush, moths and stars; keep columns, pedestal, urns, flowers; same framing and style; plain paper background.
 - Figure: keep only the jester with the book stack and brush; remove everything else; plain flat paper background; same position and scale.
+
+## Scene: elements (the nine floating objects, cut out with --crop)
+
+Subject: a sheet of nine separate small decorative objects arranged in a clean 3 by 3 grid on plain paper, each one fully separated from the others with generous empty space around it and nothing touching: a book with small feathered wings in flight; a hanging silk tassel on a twisted cord; an antique ornate key; a quill pen with a long feather; an oil lantern glowing softly; a single poppy flower on a long stem; a trailing rust-red ribbon tied in a bow; a hand mirror with a rococo frame; a crescent moon with one small star. Square composition.

@@ -13,7 +13,7 @@ let world = null;
 
 /* ---------- artwork used by the HTML ---------- */
 // the canvas art writes titles with these faces, so wait for them (a missing font just falls back)
-try { await Promise.all(['16px "Eagle Lake"', '16px Cardo', 'italic 16px Cardo'].map((f) => document.fonts.load(f))); } catch (e) { /* fall back to system serif */ }
+try { await Promise.all(['700 16px "Dancing Script"', '500 16px "Dancing Script"'].map((f) => document.fonts.load(f))); } catch (e) { /* fall back to system serif */ }
 const frameUrl = 'assets/art/frame.webp'; // the illustrated frame, same as in the 3D scenes
 const cover = Object.fromEntries(PRODUCTS.map((p) => [p.id, drawCover(p, 320, 480, { plain: true }).toDataURL('image/jpeg', 0.88)]));
 {
@@ -183,6 +183,38 @@ document.addEventListener('click', (e) => {
 });
 $$('.tcard').forEach((c) => { const i = +c.dataset.i; ['mouseenter', 'focusin'].forEach((ev) => c.addEventListener(ev, () => world?.setHover(i))); ['mouseleave', 'focusout'].forEach((ev) => c.addEventListener(ev, () => world?.setHover(-1))); });
 
+/* ---------- background look: shade + texture, remembered between visits ---------- */
+const SHADES = [
+  { id: 'paper', name: 'Paper', paper: '#ECEBE8', line: '#B8B2AC' },
+  { id: 'parchment', name: 'Parchment', paper: '#EFE5D3', line: '#BBA98C' },
+  { id: 'mist', name: 'Mist', paper: '#E2E9EC', line: '#A5B7BE' },
+  { id: 'blush', name: 'Blush', paper: '#F2E3E0', line: '#CBA8A2' },
+  { id: 'sage', name: 'Sage', paper: '#E1E8E0', line: '#9FB4A7' },
+  { id: 'dusk', name: 'Dusk', paper: '#D9D2CB', line: '#A29890' },
+];
+const TEXTURES = [['leaves', 'Leaves'], ['lattice', 'Lattice'], ['dots', 'Dots'], ['linen', 'Linen'], ['plain', 'Plain']];
+const LOOK_KEY = 'opal-ink-look-v1';
+let look = (() => { try { const l = JSON.parse(localStorage.getItem(LOOK_KEY) || '{}'); return { shade: SHADES.some((x) => x.id === l.shade) ? l.shade : 'paper', pattern: TEXTURES.some((x) => x[0] === l.pattern) ? l.pattern : 'leaves' }; } catch (e) { return { shade: 'paper', pattern: 'leaves' }; } })();
+$('#shades').innerHTML = SHADES.map((s) => `<button type="button" class="sw" data-shade="${s.id}" style="--c:${s.paper}" aria-label="${s.name} background" title="${s.name}"></button>`).join('');
+$('#textures').innerHTML = TEXTURES.map(([id, name]) => `<button type="button" class="chip" data-texture="${id}">${name}</button>`).join('');
+function applyLook() {
+  const s = SHADES.find((x) => x.id === look.shade);
+  document.documentElement.style.setProperty('--paper', s.paper);
+  $('meta[name="theme-color"]').content = s.paper;
+  $$('[data-shade]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.shade === look.shade)));
+  $$('[data-texture]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.texture === look.pattern)));
+  world?.setTheme({ paper: s.paper, pattern: look.pattern, line: s.line });
+  try { localStorage.setItem(LOOK_KEY, JSON.stringify(look)); } catch (e) { /* storage blocked: the look lasts this visit */ }
+}
+$('#palBtn').addEventListener('click', () => { const open = $('#palPanel').hidden; $('#palPanel').hidden = !open; $('#palBtn').setAttribute('aria-expanded', String(open)); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#palPanel').hidden) { $('#palPanel').hidden = true; $('#palBtn').setAttribute('aria-expanded', 'false'); $('#palBtn').focus(); } });
+$('#palPanel').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.shade) look.shade = b.dataset.shade; if (b.dataset.texture) look.pattern = b.dataset.texture;
+  applyLook();
+});
+applyLook();
+
 /* ---------- custom cursor ---------- */
 if (matchMedia('(pointer: fine)').matches) {
   const cur = $('#cursor'); document.body.classList.add('fine');
@@ -227,7 +259,7 @@ async function boot() {
   try {
     const { createWorld } = await import('./scene.js');
     world = createWorld(canvas, { mobile: matchMedia('(max-width: 899px)').matches || matchMedia('(pointer: coarse)').matches, reduced });
-    measure();
+    applyLook(); measure();
     if (reduced) { world.still(true); world.setScroll(anchors[0].y, true); snapIdx = 0; onScroll(); } else { world.setScroll(scrollY, true); world.start(); }
     canvas.addEventListener('pointermove', (e) => { const i = world.pick(e.clientX, e.clientY); world.setHover(i); canvas.style.cursor = i >= 0 ? 'pointer' : ''; document.body.classList.toggle('over', i >= 0); });
     canvas.addEventListener('click', (e) => { const i = world.pick(e.clientX, e.clientY); if (i >= 0) openProduct(i); });

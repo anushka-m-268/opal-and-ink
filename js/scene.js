@@ -1,7 +1,7 @@
 /* The 3D world: six card tableaux standing in a row, one camera that travels between them,
    and a post pass that turns the render into ink line, watercolour bleed, halftone and paper. */
 import * as THREE from '../vendor/three/three.module.js';
-import { PAL, cv, rng, drawStar, drawWallpaper, drawCardBack, drawCover, drawEdge, drawPlate, composeBook, ARCANA } from './paint.js';
+import { PAL, cv, rng, drawStar, drawPetal, drawWallpaper, drawCardBack, drawCover, drawEdge, drawPlate, composeBook, ARCANA } from './paint.js';
 import { PRODUCTS } from './config.js';
 
 THREE.ColorManagement.enabled = false; // every colour in this file is used exactly as written
@@ -37,7 +37,7 @@ void main(){
 
 const FS = `
 uniform sampler2D uMap; uniform float uHasMap; uniform vec3 uColor; uniform float uLit, uMarble, uAlpha, uMask, uDot, uTime, uReveal, uOpaque;
-uniform vec4 uCard; uniform vec3 uSun; uniform vec2 uUvOff;
+uniform vec4 uCard; uniform vec3 uSun; uniform vec2 uUvOff; uniform vec3 uTint;
 varying vec3 vW; varying vec3 vN; varying vec2 vUv;
 ${NOISE}
 float cardMask(){
@@ -53,7 +53,7 @@ void main(){
   float m = cardMask();
   if (m < .004) discard;
   vec4 base = vec4(uColor, 1.);
-  if (uHasMap > .5) { base = texture2D(uMap, vUv + uUvOff); base.rgb *= uColor; }
+  if (uHasMap > .5) { base = texture2D(uMap, vUv + uUvOff); base.rgb *= uColor * uTint; }
   vec3 col = base.rgb;
   if (uLit > .5) {
     vec3 N = uLit > 1.5 ? normalize(cross(dFdx(vW), dFdy(vW))) : normalize(vN);
@@ -73,7 +73,7 @@ void main(){
     float rim = pow(1. - abs(dot(N, V)), 2.2); col *= 1. - .28*rim;
     float sh = clamp((.5 - ndl)*2.2, 0., 1.);
     if (sh > 0.) {
-      vec2 g = mat2(.7071,-.7071,.7071,.7071) * (gl_FragCoord.xy / uDot);
+      vec2 g = mat2(.7071,-.7071,.7071,.7071) * ((vW.xy + vW.z*.37) * 38.);
       float d = length(fract(g) - .5), rad = .42*sh;
       col = mix(col, col*.45, (1. - smoothstep(rad-.08, rad+.08, d))*.8);
     }
@@ -92,7 +92,7 @@ float lin(vec2 uv){ float d = texture2D(tDepth, uv).x; return uNear*uFar / (uFar
 float lum(vec3 c){ return dot(c, vec3(.3,.59,.11)); }
 void main(){
   vec2 px = 1. / uRes;
-  vec2 w = (vec2(fbm(vUv*uRes/90. + uTime*.01), fbm(vUv*uRes/90. + 9.1)) - .5) * 3. * uPix * px;
+  vec2 w = (vec2(fbm(vUv*uRes/90.), fbm(vUv*uRes/90. + 9.1)) - .5) * 3. * uPix * px;
   if (uSimple > .5) w *= .0;
   vec2 uv = vUv + w;
   vec3 c = texture2D(tColor, uv).rgb;
@@ -110,7 +110,7 @@ void main(){
   c = mix(c, uInk, line * mix(.88, .42, clamp(zc/34., 0., 1.)));
   float g = fbm(uv*uRes/(3.5*uPix));
   c *= .955 + .09*g;
-  c += (h21(gl_FragCoord.xy + uTime) - .5) * .022;
+  c += (h21(gl_FragCoord.xy) - .5) * .022;
   vec2 q = (vUv - .5) * vec2(1., .92);
   float v = smoothstep(.62, .95, length(q)*1.35 + (fbm(vUv*6.) - .5)*.2);
   c = mix(c, uPaper, v*.85);
@@ -118,7 +118,7 @@ void main(){
 }`;
 
 /* ---------------- materials ---------------- */
-const G = { uTime: { value: 0 }, uSun: { value: new THREE.Vector3(-0.5, 0.8, 0.7).normalize() }, uDot: { value: 5 } };
+const G = { uTint: { value: new THREE.Vector3(1, 1, 1) }, uTime: { value: 0 }, uSun: { value: new THREE.Vector3(-0.5, 0.8, 0.7).normalize() }, uDot: { value: 5 } };
 const texCache = new Map();
 function T(canvas, key, repeat) {
   if (key && texCache.has(key)) return texCache.get(key);
@@ -172,7 +172,7 @@ export function createWorld(canvas, opts = {}) {
   renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(FOV, 1, 0.5, 80);
   scene.add(camera);
-  let rt = null, simple = mobile;
+  let rt = null, simple = mobile, clearHex = PAL.paper;
   const post = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: POST_FS,
     uniforms: { tColor: { value: null }, tDepth: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uNear: { value: camera.near }, uFar: { value: camera.far },
@@ -206,7 +206,8 @@ export function createWorld(canvas, opts = {}) {
   }
   // illustrated layers (assets/art/*.webp): a plane per layer, scaled so it looks the same size from the nominal camera distance
   const loader = new THREE.TextureLoader(), D = 13;
-  const art = (n) => { const t = loader.load(`assets/art/${n}.webp`); t.anisotropy = 4; return t; };
+  const artTex = new Map();
+  const art = (n) => { if (!artTex.has(n)) { const t = loader.load(`assets/art/${n}.webp`); t.anisotropy = 4; artTex.set(n, t); } return artTex.get(n); };
   function layer(tab, name, z, { w = 3.6, h = 6.45, x = 0, y = 0 } = {}) {
     const s = (D - z) / D, m = mesh(new THREE.PlaneGeometry(w * s, h * s), mat(tab, { map: art(name), transparent: true }), x * s, y * s, z);
     m.userData.base = m.position.y; tab.g.add(m); return m;
@@ -225,8 +226,8 @@ export function createWorld(canvas, opts = {}) {
   // [x, y, z] of each book, measured from the six plinth tops (and the dais step) in the artwork
   const slots = [[0, -0.73, 0.1], [-0.373, -0.957, 0.15], [0.398, -1.007, 0.15], [-0.548, -1.207, 0.25], [0.553, -1.357, 0.25], [0, -1.533, 0.3], [-0.848, -1.73, 0.35]];
   PRODUCTS.forEach((p, k) => {
-    const [x, y, z] = slots[k], b = makeBook(t1, p, { W: 0.42, H: 0.6, D: 0.1 });
-    b.position.set(x, y, z); b.userData.index = k; g1.add(b); books1.push(b);
+    const [x, y, z] = slots[k], b = makeBook(t1, p, { W: 0.42, H: 0.6, D: 0.16 });
+    b.position.set(x, y, z); b.rotation.y = (k % 2 ? -1 : 1) * 0.3; b.userData.index = k; g1.add(b); books1.push(b);
   });
   const hoverFrame = sprite(t1, art('frame'), 0.8, 1.4, 0, 0, 0.8, { alpha: 0 });
 
@@ -271,8 +272,8 @@ export function createWorld(canvas, opts = {}) {
       for (const im of imgs) if (im) x.drawImage(im, 53, 92, 314, 562);
       if (fr) x.drawImage(fr, 0, 0, 420, 720);
       x.fillStyle = PAL.ink; x.textAlign = 'center';
-      x.font = '400 21px "Eagle Lake", Georgia, serif'; x.fillText(a.numeral, 210, 128);
-      x.font = '400 19px "Eagle Lake", Georgia, serif'; x.fillText(a.name.toUpperCase(), 210, 666, 200);
+      x.font = '700 27px "Dancing Script", cursive'; x.fillText(a.numeral, 210, 128);
+      x.font = '700 24px "Dancing Script", cursive'; x.fillText(a.name, 210, 666, 200);
       t.needsUpdate = true;
     };
     paint([], null);
@@ -296,6 +297,27 @@ export function createWorld(canvas, opts = {}) {
     g.add(sp); g.scale.setScalar(0.62); scene.add(g);
     return { g, sp, ph: i * 2.1, pos: new THREE.Vector3(i ? 1 : -1, 1, 3) };
   });
+
+  /* ---- drifting poppy petals: an ambient layer that follows the card in view ---- */
+  const petalMat = mat(null, { map: T(drawPetal(), 'petal'), transparent: true, side: THREE.DoubleSide });
+  const petals = Array.from({ length: mobile ? 8 : 16 }, () => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.17), petalMat); scene.add(m);
+    return { m, x: (Math.random() - 0.5) * 7.5, y: Math.random() * 8.4 - 4.2, z: 1 + Math.random() * 2.2, sp: 0.12 + Math.random() * 0.18, ph: Math.random() * 6 };
+  });
+
+  /* ---- floating objects in the margins of each card: they bob and fade with their card ---- */
+  // each card's objects sit on the side away from its text (text is left of 0, 2, 4 and 5, right of 1 and 3)
+  const FSIZE = { 'el-book': [1.05, 0.8], 'el-tassel': [0.62, 1.3], 'el-key': [0.42, 1.0], 'el-poppy': [0.48, 1.2], 'el-lantern': [0.6, 1.0], 'el-mirror': [0.54, 1.1], 'el-bow': [0.6, 1.1], 'el-feather': [0.68, 1.1], 'el-moon': [0.75, 0.7] };
+  const FSET = [
+    [t0, 1, ['el-book', 'el-tassel', 'el-key', 'el-poppy']], [t1, -1, ['el-lantern', 'el-book', 'el-mirror', 'el-bow']],
+    [t2, 1, ['el-feather', 'el-key', 'el-lantern', 'el-tassel']], [t3, -1, ['el-poppy', 'el-bow', 'el-mirror', 'el-feather']],
+    [t4, 1, ['el-moon', 'el-lantern', 'el-key', 'el-book']], [t5, 1, ['el-moon', 'el-book', 'el-tassel', 'el-bow']],
+  ];
+  const FX = [2.6, 3.1, 2.7, 3.0], FY = [1.9, 0.6, -0.7, -1.9], FZ = [1.4, 1.1, 1.5, 1.2];
+  const floaters = FSET.flatMap(([tab, sg, names]) => names.map((n, i) => {
+    const [w, h] = FSIZE[n], m = mesh(new THREE.PlaneGeometry(w, h), mat(null, { map: art(n), transparent: true, side: THREE.DoubleSide, alpha: 0 }), sg * FX[i] * (tab === t5 ? 1.8 : 1), FY[i], FZ[i]);
+    tab.g.add(m); return { m, tab, y0: FY[i], ph: i * 1.7 + tab.idx };
+  }));
 
   /* ---- camera path ---- */
   let anchors = [], scrollY = 0, smoothY = 0, camCard = 0, speed = 0, lastFocusX = 0;
@@ -366,6 +388,15 @@ export function createWorld(canvas, opts = {}) {
       const flap = still ? 0.4 : land && m.pos.distanceTo(new THREE.Vector3(tx, ty, tz)) < 0.2 ? 0.2 + Math.sin(time * 2) * 0.15 : Math.abs(Math.sin(time * 7 + m.ph)) * 1.0;
       m.sp.scale.x = 1 - 0.3 * flap;
     });
+    for (const p of petals) {
+      if (!still) { p.y -= p.sp * dt; if (p.y < -4.3) p.y = 4.3; }
+      p.m.position.set(camCard * SP + p.x + Math.sin(time * 0.5 + p.ph) * 0.35, p.y, p.z);
+      p.m.rotation.set(time * 0.6 + p.ph, 0, time * 0.4 + p.ph * 2);
+    }
+    for (const f of floaters) {
+      f.m.material.uniforms.uAlpha.value = sstep(0.15, 0.7, f.tab.uReveal.value);
+      if (!still) { f.m.position.y = f.y0 + Math.sin(time * 0.7 + f.ph) * 0.09; f.m.rotation.z = Math.sin(time * 0.5 + f.ph) * 0.06; }
+    }
     // wallpaper: tile it to the view and slide it slightly with the camera for parallax
     bg.scale.set(2 * 60 * tanH * camera.aspect * 1.15, 2 * 60 * tanH * 1.15, 1);
     bgMat.uniforms.uUvOff.value.set(camera.position.x * 0.02, 0);
@@ -374,7 +405,7 @@ export function createWorld(canvas, opts = {}) {
   }
   function draw() {
     if (!rt) return;
-    renderer.setRenderTarget(rt); renderer.setClearColor(PAL.paper, 1); renderer.clear(); renderer.render(scene, camera);
+    renderer.setRenderTarget(rt); renderer.setClearColor(clearHex, 1); renderer.clear(); renderer.render(scene, camera);
     renderer.setRenderTarget(null); renderer.render(postScene, postCam);
   }
 
@@ -398,8 +429,17 @@ export function createWorld(canvas, opts = {}) {
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
   resize();
 
+  /* background look: paper shade (also tints the art's paper-white) and wallpaper texture */
+  function setTheme({ paper, pattern, line }) {
+    const c = new THREE.Color(paper);
+    clearHex = paper; post.material.uniforms.uPaper.value.copy(c);
+    G.uTint.value.set(c.r / 0.9255, c.g / 0.9216, c.b / 0.9098); // the art is balanced to #ECEBE8
+    bgMat.uniforms.uMap.value = T(drawWallpaper(pattern, line), `wall-${pattern}-${line}`, true);
+    if (still) { step(0); draw(); }
+  }
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
   return {
+    setTheme,
     start, stop, resize, state, still: (v) => { still = v; if (v) { stop(); step(0); draw(); } else start(); },
     setAnchors: (a) => { anchors = a; },
     setScroll: (y, snap) => { scrollY = y; if (snap || still) { smoothY = y; } if (still) { step(0); draw(); } },

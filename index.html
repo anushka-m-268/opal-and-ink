@@ -29,6 +29,12 @@
 
 <nav id="rail" class="rail" aria-label="Chapters"></nav>
 
+<button id="palBtn" class="palbtn" type="button" aria-expanded="false" aria-controls="palPanel" aria-label="Change the background colour and texture"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M12 3.5c-5 0-8.5 3.4-8.5 7.6 0 4.2 3.3 6.6 6 6.6 1.6 0 2-1 1.6-2-.5-1.2.3-2.4 1.7-2.4h2c2.2 0 3.7-1.4 3.7-3.4C18.5 6 15.6 3.5 12 3.5z"/><circle cx="8" cy="9.5" r="1" fill="currentColor"/><circle cx="12" cy="7.5" r="1" fill="currentColor"/><circle cx="16" cy="9.5" r="1" fill="currentColor"/></svg></button>
+<div id="palPanel" class="palpanel ornate" hidden role="group" aria-label="Background">
+  <p class="eyebrow">Shade</p><div id="shades" class="swatches"></div>
+  <p class="eyebrow">Texture</p><div id="textures" class="chips"></div>
+</div>
+
 <main id="main">
   <!-- 0 · The Jester -->
   <section id="hero" class="stage left" aria-labelledby="h-hero">

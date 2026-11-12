@@ -1,6 +1,6 @@
 # Opal & Ink: the tarot deck
 
-A scroll-driven 3D storefront for hand-painted novels. Each section is a major-arcana card (0 The Jester, II The High Priestess, I The Magician, III The Empress, XVII The Star, XXI The World) and one camera travels through the whole deck. Plain HTML, CSS and JavaScript with no build step. Three.js r160 (MIT) is bundled in `vendor/three/`. No frameworks, trackers or remote fonts (Eagle Lake and Cardo are bundled, both SIL OFL). The scene art is a set of AI-generated illustrations in `assets/art/` (see Art below); book covers, plates and edges are drawn in the browser by `js/paint.js`.
+A scroll-driven 3D storefront for hand-painted novels. Each section is a major-arcana card (0 The Jester, II The High Priestess, I The Magician, III The Empress, XVII The Star, XXI The World) and one camera travels through the whole deck. Plain HTML, CSS and JavaScript with no build step. Three.js r160 (MIT) is bundled in `vendor/three/`. No frameworks, trackers or remote fonts (the cursive font, Dancing Script, is bundled under the SIL OFL). The scene art is a set of AI-generated illustrations in `assets/art/` (see Art below); book covers, plates and edges are drawn in the browser by `js/paint.js`.
 
 ## Run it
 
@@ -36,9 +36,13 @@ Page copy, the FAQ and the maker story are in `index.html` (look for `OWNER` com
 - `js/scene.js`: six tableaux, each a few illustrated layers on planes at different depths plus live 3D books and sparkles. Every material shares one shader, including a noisy fade-to-paper mask that blooms outward as the camera arrives, and books get a three-band wash with halftone in shadow. A post pass adds ink outlines (thinner and lighter with distance), watercolour bleed, paper grain and a paper vignette.
 - `js/main.js`: shop, cart (localStorage), dialogs (native `<dialog>`, so focus is trapped and Esc closes), forms, chapter rail, custom cursor, and the link from scroll position to camera shots.
 
+## Background palette
+
+The round palette button (bottom left, top left on phones) lets a visitor pick a paper shade and a wallpaper texture; the choice is remembered in their browser. It recolours the page, the 3D backdrop and the paper-white of the artwork together. Add or change options in `SHADES` and `TEXTURES` in `js/main.js`; new textures are drawn in `drawWallpaper` in `js/paint.js`.
+
 ## Art
 
-The illustrations were generated with Google Gemini (`gemini-3-pro-image`) from the prompts in `tools/art-prompts.md`, in an original composition (they are not copies of any existing artwork). Images made this way carry an invisible SynthID watermark, and you should check the terms for commercial use before relying on them. Each tableau is built from layers on planes at different depths, so the camera drifts past them with parallax: `hero-bg` and `hero-fg`, `collection`, `craft`, `empress`, `star`, plus the `frame` around every card and two moth sprites. The 3D books, the book that repaints itself on the workbench and lectern, and the tool highlights are live objects placed on top at positions read off the artwork.
+The illustrations were generated with Google Gemini (`gemini-3-pro-image`) from the prompts in `tools/art-prompts.md`, in an original composition (they are not copies of any existing artwork). Images made this way carry an invisible SynthID watermark, and you should check the terms for commercial use before relying on them. Each tableau is built from layers on planes at different depths, so the camera drifts past them with parallax: `hero-bg` and `hero-fg`, `collection`, `craft`, `empress`, `star`, plus the `frame` around every card, two moth sprites and nine floating objects (`el-*`, cut from one sheet) that drift in the margins. The 3D books, the book that repaints itself on the workbench and lectern, and the tool highlights are live objects placed on top at positions read off the artwork.
 
 To change a picture: generate a new one on plain paper, then cut it out and drop the result into `assets/art/`:
 

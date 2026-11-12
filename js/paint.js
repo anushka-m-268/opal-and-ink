@@ -386,17 +386,38 @@ export function drawFrame(w = 700, h = 1200) {
   leaf(c, sx - 124, by, 50, 180); leaf(c, sx + 124, by, 50, 0);
   return cvs;
 }
-export function drawWallpaper(s = 256) {
-  const cvs = cv(s, s), c = cvs.getContext('2d');
-  c.strokeStyle = PAL.stone; c.globalAlpha = 0.4; c.lineWidth = 1.2; c.lineCap = 'round';
-  const L = (x, y, a, l) => {
-    for (const ox of [-s, 0, s]) for (const oy of [-s, 0, s]) {
-      const X = x + ox, Y = y + oy, e = at([X, Y], a, l), m1 = at([X, Y], a + 22, l * 0.5), m2 = at([X, Y], a - 22, l * 0.5);
-      c.beginPath(); c.moveTo(X, Y); c.quadraticCurveTo(...m1, ...e); c.quadraticCurveTo(...m2, X, Y); c.stroke();
-      c.beginPath(); c.moveTo(X, Y); c.lineTo(...at([X, Y], a, l * 0.9)); c.stroke();
-    }
-  };
-  L(60, 70, -50, 70); L(60, 70, 40, 58); L(190, 190, 130, 70); L(190, 190, 220, 58); L(200, 60, 200, 42); L(40, 200, 20, 42);
+/* tileable background textures: leaves, lattice, dots, linen, plain */
+export function drawWallpaper(kind = 'leaves', color = PAL.stone, size = 256) {
+  const s = size, cvs = cv(s, s), c = cvs.getContext('2d'), rnd = rng(9);
+  c.strokeStyle = color; c.fillStyle = color; c.lineWidth = 1.2; c.lineCap = 'round'; c.globalAlpha = 0.4;
+  const line = (x0, y0, x1, y1) => { c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); };
+  if (kind === 'leaves') {
+    const L = (x, y, a, l) => {
+      for (const ox of [-s, 0, s]) for (const oy of [-s, 0, s]) {
+        const X = x + ox, Y = y + oy, e = at([X, Y], a, l), m1 = at([X, Y], a + 22, l * 0.5), m2 = at([X, Y], a - 22, l * 0.5);
+        c.beginPath(); c.moveTo(X, Y); c.quadraticCurveTo(...m1, ...e); c.quadraticCurveTo(...m2, X, Y); c.stroke();
+        c.beginPath(); c.moveTo(X, Y); c.lineTo(...at([X, Y], a, l * 0.9)); c.stroke();
+      }
+    };
+    L(60, 70, -50, 70); L(60, 70, 40, 58); L(190, 190, 130, 70); L(190, 190, 220, 58); L(200, 60, 200, 42); L(40, 200, 20, 42);
+  } else if (kind === 'lattice') {
+    const g = 64; c.lineWidth = 1;
+    for (let i = -s; i < s * 2; i += g) { line(i, 0, i + s, s); line(i, s, i + s, 0); }
+    for (let x = 0; x < s; x += g) for (let y = 0; y < s; y += g) { c.beginPath(); c.arc(x, y, 2.6, 0, TAU); c.fill(); }
+  } else if (kind === 'dots') {
+    for (let y = 0, r = 0; y < s; y += 32, r++) for (let x = (r % 2) * 16; x < s; x += 32) { c.beginPath(); c.arc(x, y, 1.7, 0, TAU); c.fill(); }
+    for (const [x, y] of [[64, 48], [192, 176], [16, 208]]) { c.globalAlpha = 0.55; line(x - 6, y, x + 6, y); line(x, y - 6, x, y + 6); c.globalAlpha = 0.4; }
+  } else if (kind === 'linen') {
+    for (let i = 0; i < s; i += 3) { c.globalAlpha = 0.05 + rnd() * 0.12; line(0, i, s, i); c.globalAlpha = 0.05 + rnd() * 0.12; line(i, 0, i, s); }
+  }
+  return cvs;
+}
+/* a drifting poppy petal */
+export function drawPetal() {
+  const cvs = cv(64, 64), c = cvs.getContext('2d');
+  const path = smooth([[32, 6], [52, 24], [46, 52], [32, 58], [18, 50], [12, 24]]);
+  wash(c, path, PAL.poppy, { a: 0.9, blur: 2, edge: 0.5 }); ink(c, path, 1.4, 0.6);
+  ink(c, poly([[32, 12], [32, 50]], false), 0.8, 0.35);
   return cvs;
 }
 export function drawCardBack(w = 280, h = 480) {
@@ -450,7 +471,7 @@ function wrap(c, text, x, y, maxW, lh) {
   for (const w of words) { const t = line ? line + ' ' + w : w; if (c.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; }
   out.push(line); out.forEach((l, i) => c.fillText(l, x, y + i * lh)); return out.length;
 }
-const SERIF = 'Cardo,"Iowan Old Style",Palatino,Georgia,serif';
+const SERIF = '"Dancing Script","Brush Script MT",cursive';
 export function drawCover(p, w = 512, h = 768, opts = {}) {
   const cvs = cv(w, h), c = cvs.getContext('2d'), rnd = rng(p.seed || 5), [c1, c2] = p.palette;
   c.fillStyle = PAL.paper; c.fillRect(0, 0, w, h);
@@ -461,9 +482,9 @@ export function drawCover(p, w = 512, h = 768, opts = {}) {
   emblem(c, p.motif, w / 2, h * 0.4, 118, { cols: [c1, c2, PAL.blush] });
   c.fillStyle = PAL.paper; c.globalAlpha = 0.9; c.fillRect(44, h * 0.66, w - 88, h * 0.26); c.globalAlpha = 1;
   ink(c, (cc) => { cc.beginPath(); cc.rect(44, h * 0.66, w - 88, h * 0.26); }, 1.4, 0.7);
-  c.fillStyle = PAL.ink; c.textAlign = 'center'; c.font = `400 34px "Eagle Lake",${SERIF}`;
+  c.fillStyle = PAL.ink; c.textAlign = 'center'; c.font = `700 38px ${SERIF}`;
   const n = wrap(c, p.title, w / 2, h * 0.66 + 58, w - 130, 44);
-  c.font = `500 20px ${SERIF}`; c.fillStyle = PAL.slate; c.fillText(p.author.toUpperCase().split('').join(' '), w / 2, h * 0.66 + 58 + n * 44 + 14);
+  c.font = `600 26px ${SERIF}`; c.fillStyle = PAL.slate; c.fillText(p.author, w / 2, h * 0.66 + 58 + n * 44 + 14);
   scrollMotif(c, 50, 60, 0.4, 1); scrollMotif(c, w - 50, 60, 0.4, -1);
   return cvs;
 }
@@ -496,7 +517,7 @@ export function bookLayers(w = 512, h = 768) {
   const cols = { cols: [PAL.rust, PAL.sage, PAL.blush] }; const ptc = paint.getContext('2d');
   wash(ptc, ell(w / 2, h * 0.42, 190, 190), PAL.sage, { a: 0.45, blur: 30, edge: 0 }); emblem(ptc, 'rose', w / 2, h * 0.42, 130, { ...cols, ink: false });
   const gc = gild.getContext('2d'); gc.strokeStyle = PAL.gold; gc.lineWidth = 5; gc.strokeRect(36, 36, w - 72, h - 72); gc.lineWidth = 2; gc.strokeRect(52, 52, w - 104, h - 104);
-  gc.fillStyle = PAL.gold; gc.font = `400 44px "Eagle Lake",${SERIF}`; gc.textAlign = 'center'; gc.fillText('OPAL & INK', w / 2, h * 0.82);
+  gc.fillStyle = PAL.gold; gc.font = `700 48px ${SERIF}`; gc.textAlign = 'center'; gc.fillText('OPAL & INK', w / 2, h * 0.82);
   for (let i = 0; i < 4; i++) emblemStar(gc, 96 + (i % 2) * (w - 192), 96 + Math.floor(i / 2) * (h - 192), 16, PAL.gold, { ink: false });
   return (_layers = { prime, sketch, paint, gild, w, h });
 }
@@ -518,8 +539,8 @@ export function drawCardFace({ numeral, name, motif }, w = 420, h = 720) {
   wash(c, ell(w / 2, h * 0.47, 150, 200), PAL.blush, { a: 0.3, blur: 30, edge: 0 });
   emblem(c, motif, w / 2, h * 0.47, 100, { cols: [PAL.rust, PAL.sage, PAL.blush] });
   c.save(); c.globalAlpha = 0.9; c.drawImage(drawFrame(700, 1200), 0, 0, w, h); c.restore();
-  c.fillStyle = PAL.ink; c.textAlign = 'center'; c.font = `400 30px "Eagle Lake",${SERIF}`; c.fillText(numeral.split('').join(' '), w / 2, 126);
-  c.font = `400 26px "Eagle Lake",${SERIF}`; c.fillText(name.toUpperCase(), w / 2, h - 64, w - 150);
+  c.fillStyle = PAL.ink; c.textAlign = 'center'; c.font = `700 34px ${SERIF}`; c.fillText(numeral.split('').join(' '), w / 2, 126);
+  c.font = `700 30px ${SERIF}`; c.fillText(name.toUpperCase(), w / 2, h - 64, w - 150);
   return cvs;
 }
 export const ARCANA = [
