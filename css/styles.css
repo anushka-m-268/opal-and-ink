@@ -255,3 +255,11 @@ input, select, textarea { font-family: var(--serif); font-size: 1.15rem; font-we
 .chip { font: 600 1.1rem var(--serif); min-height: 40px; padding: 0 14px; border: 1px solid var(--stone); background: transparent; color: var(--ink); cursor: pointer; }
 .chip[aria-pressed="true"] { background: var(--rust); border-color: var(--rust); color: #fff; }
 @media (max-width: 899px) { .palbtn { width: 42px; height: 42px; top: calc(70px + env(safe-area-inset-top, 0px)); bottom: auto; left: calc(12px + env(safe-area-inset-left, 0px)); } .palpanel { top: calc(120px + env(safe-area-inset-top, 0px)); bottom: auto; left: calc(12px + env(safe-area-inset-left, 0px)); } }
+
+/* ---- shop page ---- */
+.shop-page main { padding-top: clamp(84px, 14vh, 130px); min-height: 70vh; }
+.shop-page .panel { background: transparent; padding-top: 4vh; }
+.shop-page .panel::before { display: none; }
+.shop-page .foot { background: color-mix(in srgb, var(--paper) 94%, transparent); }
+.nav a[aria-current="page"] { background-size: 100% 1px; }
+.shop-page h1 { font-size: clamp(2.8rem, 6vw, 4.8rem); }

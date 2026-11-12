@@ -19,7 +19,7 @@
 <header class="top">
   <a class="mark" href="#hero" aria-label="Opal &amp; Ink, back to the top"><span>Opal</span> &amp; Ink</a>
   <nav id="nav" class="nav" aria-label="Main">
-    <a href="#shop">Shop</a><a href="#commissions">Commissions</a><a href="#craft">Our Craft</a><a href="#about">About</a><a href="#faq">FAQ</a><a href="#contact">Contact</a>
+    <a href="shop.html">Shop</a><a href="#commissions">Commissions</a><a href="#craft">Our Craft</a><a href="#about">About</a><a href="#faq">FAQ</a><a href="#contact">Contact</a>
   </nav>
   <div class="tools">
     <button id="cartBtn" class="iconbtn" type="button" aria-label="Open cart, 0 items"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M5 8h14l-1.2 11H6.2L5 8z"/><path d="M9 8V6.5a3 3 0 016 0V8"/></svg><span id="cartCount" class="count" hidden>0</span></button>
@@ -29,11 +29,7 @@
 
 <nav id="rail" class="rail" aria-label="Chapters"></nav>
 
-<button id="palBtn" class="palbtn" type="button" aria-expanded="false" aria-controls="palPanel" aria-label="Change the background colour and texture"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M12 3.5c-5 0-8.5 3.4-8.5 7.6 0 4.2 3.3 6.6 6 6.6 1.6 0 2-1 1.6-2-.5-1.2.3-2.4 1.7-2.4h2c2.2 0 3.7-1.4 3.7-3.4C18.5 6 15.6 3.5 12 3.5z"/><circle cx="8" cy="9.5" r="1" fill="currentColor"/><circle cx="12" cy="7.5" r="1" fill="currentColor"/><circle cx="16" cy="9.5" r="1" fill="currentColor"/></svg></button>
-<div id="palPanel" class="palpanel ornate" hidden role="group" aria-label="Background">
-  <p class="eyebrow">Shade</p><div id="shades" class="swatches"></div>
-  <p class="eyebrow">Texture</p><div id="textures" class="chips"></div>
-</div>
+
 
 <main id="main">
   <!-- 0 · The Jester -->
@@ -42,7 +38,7 @@
       <p class="eyebrow">0 &middot; The Jester</p>
       <h1 id="h-hero" class="reveal">Opal &amp; Ink</h1>
       <p class="lede">Novels painted by hand, one spine at a time.</p>
-      <p class="cta"><a class="btn solid" href="#shop">Browse the Collection</a><a class="btn" href="#commissions">Commission a Book</a></p>
+      <p class="cta"><a class="btn solid" href="shop.html">Browse the Collection</a><a class="btn" href="#commissions">Commission a Book</a></p>
     </div>
   </section>
 
@@ -52,20 +48,7 @@
       <p class="eyebrow">II &middot; The High Priestess</p>
       <h2 id="h-coll" class="reveal">The Collection</h2>
       <p>Seven hand-bound editions rest on marble plinths. Hover a book to see it closer, or draw a card and let the deck choose for you.</p>
-      <p class="cta"><a class="btn solid" href="#shop">See every book</a><button class="btn" type="button" data-draw>Draw a Card</button></p>
-    </div>
-  </section>
-
-  <section id="shop" class="panel" aria-labelledby="h-shop">
-    <div class="inner">
-      <p class="eyebrow">The Deck</p>
-      <h2 id="h-shop">Every book, one card each</h2>
-      <p class="muted">Each edition is an unofficial hand-bound copy made from a lawfully purchased book, with original artwork by the bindery. Select a card to turn it over.</p>
-      <div id="grid" class="tgrid"></div>
-      <div id="reviews" class="reviews" hidden>
-        <h3>Reviews</h3>
-        <ul id="reviewList"></ul>
-      </div>
+      <p class="cta"><a class="btn solid" href="shop.html">See every book</a><button class="btn" type="button" data-draw>Draw a Card</button></p>
     </div>
   </section>
 
@@ -159,7 +142,7 @@
         <button class="btn solid" type="submit">Join</button>
       </form>
       <p id="nStatus" class="status" role="status"></p>
-      <p class="cta"><a class="btn" href="#shop">Browse the Collection</a></p>
+      <p class="cta"><a class="btn" href="shop.html">Browse the Collection</a></p>
     </div></div>
   </section>
 </main>
@@ -172,47 +155,6 @@
   </div>
   <p class="copy-right">&copy; <span id="year">2026</span> Opal &amp; Ink. All artwork is original.</p>
 </footer>
-
-<!-- cart drawer -->
-<dialog id="cart" class="drawer ornate" aria-labelledby="cartTitle">
-  <div class="dhead"><h2 id="cartTitle">Your satchel</h2><button class="iconbtn" type="button" data-close aria-label="Close cart"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>
-  <div id="cartBody"></div>
-</dialog>
-
-<!-- product: the card flips to show the 3D book -->
-<dialog id="product" class="pdlg" aria-labelledby="pTitle">
-  <button class="iconbtn close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
-  <div class="flip" id="flip">
-    <div class="flip-inner">
-      <div class="fface front"><div id="pFront"></div></div>
-      <div class="fface back ornate">
-        <div class="viewer"><canvas id="pCanvas" aria-label="3D book. Drag to turn it, click to open the cover." role="img"></canvas><p class="hint">Drag to turn. Click to open.</p><div class="vbtns"><button class="btn small" type="button" id="pOpen">Open the cover</button></div></div>
-        <div class="details">
-          <p class="eyebrow" id="pNum"></p><h2 id="pTitle"></h2><p class="author" id="pAuthor"></p>
-          <p id="pBlurb"></p>
-          <dl id="pDl"></dl>
-          <p class="price" id="pPrice"></p>
-          <p class="cta"><button class="btn solid" type="button" id="pAdd">Add to Cart</button></p>
-        </div>
-      </div>
-    </div>
-  </div>
-</dialog>
-
-<!-- draw a card -->
-<dialog id="draw" class="pdlg small ornate" aria-labelledby="dTitle">
-  <button class="iconbtn close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
-  <h2 id="dTitle">Draw a card</h2>
-  <p class="muted">A playful way to pick a book. Not a prediction.</p>
-  <div id="deck" class="deck" aria-hidden="true"></div>
-  <div id="dResult" class="dresult" aria-live="polite"></div>
-  <p class="cta"><button class="btn solid" type="button" id="dGo">Shuffle and draw</button></p>
-</dialog>
-
-<dialog id="policy" class="pdlg small ornate" aria-labelledby="polTitle">
-  <button class="iconbtn close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
-  <h2 id="polTitle"></h2><div id="polBody"></div>
-</dialog>
 
 <noscript><p class="noscript">Opal &amp; Ink needs JavaScript for the shop and the 3D deck. Email us to order or commission a book.</p></noscript>
 <script type="module" src="js/main.js"></script>

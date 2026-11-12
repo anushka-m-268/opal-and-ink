@@ -1,7 +1,9 @@
 /* Page behaviour: shop, cart, dialogs, forms, chapter rail, and the scroll-to-camera link. */
 import { CONFIG, PRODUCTS, REVIEWS, BOOK_DETAILS } from './config.js';
-import { ARCANA, drawCover, drawCardBack, drawCardFace, drawJester, drawMoth, wash, ink, PAL, cv } from './paint.js';
+import { SHARED_HTML } from './chrome.js';
+import { ARCANA, drawWallpaper, drawCover, drawCardBack, drawCardFace, drawJester, drawMoth, wash, ink, PAL, cv } from './paint.js';
 
+document.body.insertAdjacentHTML('beforeend', SHARED_HTML);
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const qs = new URLSearchParams(location.search);
@@ -47,12 +49,14 @@ function tarotFace(p, i, asButton = true) {
   const inner = `<img class="cardart" src="${frameUrl}" alt=""><span class="num">${esc(p.numeral)}</span><img class="cover" src="${cover[p.id]}" alt="Painted cover of ${esc(p.title)}"><span class="banner">${esc(p.title)}</span>`;
   return asButton ? `<button class="tface" type="button" data-open="${i}" aria-label="${esc(p.title)} by ${esc(p.author)}, ${fmt.format(p.price)}. Turn the card over.">${inner}</button>` : `<div class="tface" role="img" aria-label="${esc(p.title)}">${inner}</div>`;
 }
+if ($('#grid')) {
 $('#grid').innerHTML = PRODUCTS.map((p, i) => `<article class="tcard" data-i="${i}">${tarotFace(p, i)}
   <div class="meta"><span>${fmt.format(p.price)}</span><span class="ed">${esc(p.edition)}</span></div>
   ${p.stock > 0 ? `<button class="btn small solid" type="button" data-add="${p.id}">Add to Cart</button>` : '<span class="sold">Sold</span>'}</article>`).join('');
 if (REVIEWS.length) {
   $('#reviews').hidden = false;
   $('#reviewList').innerHTML = REVIEWS.map((r) => `<li><strong>${esc(r.name)}</strong> on <em>${esc(r.book)}</em>, ${'★'.repeat(r.rating || 0)}<br>${esc(r.text)}</li>`).join('');
+}
 }
 
 /* ---------- cart ---------- */
@@ -74,7 +78,7 @@ function renderCart() {
   const n = count(), badge = $('#cartCount');
   badge.hidden = n === 0; badge.textContent = n; $('#cartBtn').setAttribute('aria-label', `Open cart, ${n} item${n === 1 ? '' : 's'}`);
   const body = $('#cartBody');
-  if (!cart.length) { body.innerHTML = `<div class="empty"><img src="${satchelUrl()}" alt="A paper moth peeking out of an empty satchel"><p>Your satchel is empty.</p><p><button class="btn solid" type="button" data-close data-goto="#shop">Browse the Collection</button></p></div>`; return; }
+  if (!cart.length) { body.innerHTML = `<div class="empty"><img src="${satchelUrl()}" alt="A paper moth peeking out of an empty satchel"><p>Your satchel is empty.</p><p><a class="btn solid" href="shop.html">Browse the Collection</a></p></div>`; return; }
   const linked = cart.filter((l) => byId(l.id).paymentLink), unlinked = cart.filter((l) => !byId(l.id).paymentLink);
   body.innerHTML = cart.map((l) => { const p = byId(l.id); return `<div class="line"><img src="${cover[p.id]}" alt=""><div><div class="t">${esc(p.title)}</div><div class="qty"><button type="button" data-dec="${p.id}" aria-label="Fewer ${esc(p.title)}">−</button><span aria-label="Quantity">${l.qty}</span><button type="button" data-inc="${p.id}" aria-label="More ${esc(p.title)}">+</button><button type="button" class="link" data-rm="${p.id}" style="margin-left:10px">Remove</button></div></div><div>${fmt.format(p.price * l.qty)}</div></div>`; }).join('')
     + `<div class="total"><span>Subtotal</span><span>${fmt.format(subtotal())}</span></div><div class="stack">`
@@ -140,12 +144,12 @@ async function submit(form, statusEl, { endpoint, mailto, okText, required }) {
     catch (e) { statusEl.classList.add('err'); statusEl.textContent = 'That did not send. Please try again, or email us directly at ' + CONFIG.contactEmail + '.'; }
   } else { location.href = mailto(data); ok(); }
 }
-$('#commissionForm').addEventListener('submit', (e) => {
+$('#commissionForm')?.addEventListener('submit', (e) => {
   e.preventDefault();
   submit(e.target, $('#cStatus'), { endpoint: CONFIG.formEndpoint, required: ['name', 'email', 'message'], okText: 'Thank you. We have opened your email app with the details. Send it and we will reply with a sketch plan.',
     mailto: (d) => `mailto:${CONFIG.contactEmail}?subject=${encodeURIComponent('Commission inquiry: ' + (d.book || 'new book'))}&body=${encodeURIComponent(`Name: ${d.name}\nEmail: ${d.email}\nBook: ${d.book}\nStyle notes: ${d.style}\nBudget: ${d.budget}\n\n${d.message}`)}` });
 });
-$('#newsForm').addEventListener('submit', (e) => {
+$('#newsForm')?.addEventListener('submit', (e) => {
   e.preventDefault();
   submit(e.target, $('#nStatus'), { endpoint: CONFIG.newsletterEndpoint, required: ['email'], okText: 'Welcome to the deck. We have opened an email to confirm your sign-up.',
     mailto: (d) => `mailto:${CONFIG.contactEmail}?subject=${encodeURIComponent('Newsletter sign-up')}&body=${encodeURIComponent('Please add me to the list: ' + d.email)}` });
@@ -157,8 +161,9 @@ $('#social').innerHTML = CONFIG.social.filter((s) => s.url).map((s) => `<li><a h
 $('#menuBtn').addEventListener('click', () => { const o = $('#nav').classList.toggle('open'); $('#menuBtn').setAttribute('aria-expanded', o); });
 $('#nav').addEventListener('click', (e) => { if (e.target.closest('a')) { $('#nav').classList.remove('open'); $('#menuBtn').setAttribute('aria-expanded', 'false'); } });
 const RAIL = [['#hero', 0], ['#collection', 1], ['#craft', 2], ['#commissions', 3], ['#about', 4], ['#world-sec', 5]];
-$('#rail').innerHTML = RAIL.map(([sel, k]) => `<button class="rcard" type="button" data-goto="${sel}" aria-label="Chapter ${ARCANA[k].numeral}: ${ARCANA[k].name}"><i class="b"></i><i class="f">${ARCANA[k].numeral}</i></button>`).join('');
+if ($('#rail')) $('#rail').innerHTML = RAIL.map(([sel, k]) => `<button class="rcard" type="button" data-goto="${sel}" aria-label="Chapter ${ARCANA[k].numeral}: ${ARCANA[k].name}"><i class="b"></i><i class="f">${ARCANA[k].numeral}</i></button>`).join('');
 function updateRail() {
+  if (!$('#rail')) return;
   const mid = innerHeight / 2; let best = 0, bd = 1e9;
   RAIL.forEach(([sel], i) => { const r = $(sel).getBoundingClientRect(); const d = r.top > mid ? r.top - mid : r.bottom < mid ? mid - r.bottom : 0; if (d < bd) { bd = d; best = i; } });
   $$('.rcard').forEach((b, i) => b.setAttribute('aria-current', i === best ? 'true' : 'false'));
@@ -204,6 +209,10 @@ function applyLook() {
   $$('[data-shade]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.shade === look.shade)));
   $$('[data-texture]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.texture === look.pattern)));
   world?.setTheme({ paper: s.paper, pattern: look.pattern, line: s.line });
+  if (!$('#world')) { // no 3D backdrop on this page: tile the same wallpaper behind the content
+    document.body.style.backgroundImage = look.pattern === 'plain' ? 'none' : `url(${drawWallpaper(look.pattern, s.line).toDataURL()})`;
+    document.body.style.backgroundSize = '340px';
+  }
   try { localStorage.setItem(LOOK_KEY, JSON.stringify(look)); } catch (e) { /* storage blocked: the look lasts this visit */ }
 }
 $('#palBtn').addEventListener('click', () => { const open = $('#palPanel').hidden; $('#palPanel').hidden = !open; $('#palBtn').setAttribute('aria-expanded', String(open)); });
@@ -238,6 +247,7 @@ const ANCH = [
 ];
 let anchors = [], snapIdx = -1;
 function measure() {
+  if (!$('#world')) return;
   anchors = ANCH.map(([sel, p]) => { const r = $(sel).getBoundingClientRect(); return { ...DEF, ...p, y: r.top + scrollY + r.height / 2 - innerHeight / 2 }; }).sort((a, b) => a.y - b.y);
   world?.setAnchors(anchors);
 }
@@ -255,6 +265,7 @@ function onScroll() {
 }
 async function boot() {
   const loader = $('#loading'), canvas = $('#world');
+  if (!canvas) return; // the shop page has no 3D scene
   await new Promise((r) => setTimeout(r, 40));
   try {
     const { createWorld } = await import('./scene.js');
@@ -272,7 +283,7 @@ async function boot() {
     console.info('3D scene unavailable, showing the page without it:', err.message);
     document.body.classList.add('nogl');
   }
-  loader.classList.add('done');
+  loader?.classList.add('done');
 }
 addEventListener('scroll', onScroll, { passive: true });
 addEventListener('load', () => { measure(); onScroll(); });

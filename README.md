@@ -34,6 +34,7 @@ Page copy, the FAQ and the maker story are in `index.html` (look for `OWNER` com
 
 - `js/paint.js`: ink line, watercolour wash and halftone drawn on canvases. It paints the book covers, plates, page edges, the book that repaints itself and the card back. It also holds the earlier code-drawn Jester and flora, which `sheet.html` still shows.
 - `js/scene.js`: six tableaux, each a few illustrated layers on planes at different depths plus live 3D books and sparkles. Every material shares one shader, including a noisy fade-to-paper mask that blooms outward as the camera arrives, and books get a three-band wash with halftone in shadow. A post pass adds ink outlines (thinner and lighter with distance), watercolour bleed, paper grain and a paper vignette.
+- Pages: `index.html` is the 3D deck and `shop.html` is the product list (no 3D scene). The palette button and the cart, product, draw-a-card and policy dialogs are written once in `js/chrome.js` and added to both pages; the cart and background choice are shared through the browser's storage.
 - `js/main.js`: shop, cart (localStorage), dialogs (native `<dialog>`, so focus is trapped and Esc closes), forms, chapter rail, custom cursor, and the link from scroll position to camera shots.
 
 ## Background palette
